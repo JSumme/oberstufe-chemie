@@ -13,7 +13,7 @@ Autor: Jan Summe
 
 | Ordner | Thema | Inhalt | Link |
 |---|---|---|---|
-| `01-kinetik-ggw/` | Kinetik und chemisches Gleichgewicht | Lern-App Reaktionskinetik | [öffnen](https://jsumme.github.io/oberstufe-chemie/01-kinetik-ggw/) |
+| `01-kinetik-ggw/` | Kinetik und chemisches Gleichgewicht | Lern-App inkl. Simulationen (Kinetik, Le Chatelier) | [öffnen](https://jsumme.github.io/oberstufe-chemie/01-kinetik-ggw/) |
 | `01-kinetik-ggw/lechatelier-konzentration.html` | | Simulation Estersynthese (Konzentration) | [öffnen](https://jsumme.github.io/oberstufe-chemie/01-kinetik-ggw/lechatelier-konzentration.html) |
 | `01-kinetik-ggw/lechatelier-druck.html` | | Simulation NO₂/N₂O₄ (Druck) | [öffnen](https://jsumme.github.io/oberstufe-chemie/01-kinetik-ggw/lechatelier-druck.html) |
 | `01-kinetik-ggw/lechatelier-temperatur.html` | | Simulation NO₂/N₂O₄ (Temperatur) | [öffnen](https://jsumme.github.io/oberstufe-chemie/01-kinetik-ggw/lechatelier-temperatur.html) |
