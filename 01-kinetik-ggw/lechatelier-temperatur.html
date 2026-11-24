@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperaturabhängigkeit: NO2 / N2O4 Gleichgewicht</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            display: block;
+        }
+        /* Übergang für den makroskopischen Farbeffekt im Hintergrund */
+        #vesselBackground {
+            transition: background-color 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header (Angepasst an Screenshot-Stil) -->
+        <details class="group bg-white rounded-xl shadow-sm border border-slate-200" open>
+            <summary class="cursor-pointer list-none flex justify-between items-center p-6 border-b border-slate-100">
+                <div class="flex items-center gap-4 w-full">
+                    <!-- Erlenmeyerkolben Icon -->
+                    <svg class="w-8 h-8 text-[#7ca58e] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    <h1 class="text-xl md:text-2xl font-bold text-[#7ca58e] text-center flex-grow pr-8">Simulation: Temperaturabhängigkeit des Chemischen Gleichgewichts</h1>
+                </div>
+                <!-- Chevron Icon -->
+                <svg class="w-6 h-6 text-[#7ca58e] transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+            </summary>
+            
+            <div class="p-6 text-slate-700 leading-relaxed">
+                <p class="mb-2">
+                    Simulation der temperaturabhängigen Gleichgewichtsreaktion auf Teilchenebene:
+                </p>
+                <p class="mb-2 text-lg font-bold">
+                    2 NO<sub>2</sub> ⇌ N<sub>2</sub>O<sub>4</sub>
+                </p>
+                <p class="mb-6">
+                    Beobachte, wie sich das Gleichgewicht bei einer Temperaturänderung verschiebt. Vergleiche den makroskopischen Farbeffekt im Gefäß mit der mikroskopischen Teilchenebene.
+                </p>
+                
+                <!-- Legende -->
+                <div class="flex flex-wrap gap-6 pt-5 border-t border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full inline-block" style="background-color: #92400E;"></span> 
+                        <span class="text-sm font-bold text-slate-800">NO<sub>2</sub></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <!-- N2O4 farblos / hellgrau zur Darstellung -->
+                        <span class="w-4 h-4 rounded-full inline-block bg-slate-300"></span> 
+                        <span class="text-sm font-bold text-slate-800">N<sub>2</sub>O<sub>4</sub></span>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Steuerung (Links) -->
+            <div class="col-span-1 lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-6">
+                <!-- Buttons Moved to Top -->
+                <div class="flex flex-col gap-2 mb-2">
+                    <button id="btnPlay" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded transition shadow">
+                        ▶ Simulation starten
+                    </button>
+                    <button id="btnSpeed" class="bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded transition">
+                        ⏩ 2x Geschwindigkeit
+                    </button>
+                    <button id="btnReset" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-2 px-4 rounded transition">
+                        Neu starten
+                    </button>
+                </div>
+
+                <h2 class="text-xl font-bold border-b pb-2">Parameter</h2>
+                
+                <!-- Startwerte -->
+                <div class="space-y-3">
+                    <h3 class="font-semibold text-slate-700">Startanzahl der Teilchen</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">NO<sub>2</sub></label>
+                            <input type="number" id="startNO2" value="100" min="0" max="200" class="w-full border rounded p-2 focus:ring focus:ring-amber-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">N<sub>2</sub>O<sub>4</sub></label>
+                            <input type="number" id="startN2O4" value="0" min="0" max="100" class="w-full border rounded p-2 focus:ring focus:ring-slate-200">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Temperatur Slider -->
+                <div class="space-y-4 pt-4 border-t">
+                    <h3 class="font-semibold text-slate-700">Temperatur Wasserbad</h3>
+                    <p class="text-[11px] text-slate-500 mb-2 leading-tight">Beobachte den makroskopischen Farbeffekt bei Veränderung der Temperatur im Vergleich zum Foto aus dem Experiment.</p>
+                    
+                    <div class="bg-gradient-to-r from-blue-50 to-red-50 p-3 rounded border border-slate-200">
+                        <label class="flex justify-between text-sm font-bold text-slate-700 mb-2">
+                            <span>Temperatur</span>
+                            <span id="tempVal" class="text-red-600">30 °C</span>
+                        </label>
+                        <input type="range" id="tempSlider" min="0" max="100" step="1" value="30" class="w-full accent-slate-600">
+                        <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-bold">
+                            <span>Eisbad (0°C)</span>
+                            <span>Heiß (100°C)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hauptbereich: Gefäß & Graph (Rechts) -->
+            <div class="col-span-1 lg:col-span-9 flex flex-col gap-6">
+                
+                <!-- Visualisierung (Oben) -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                    <h3 class="font-bold text-slate-700 mb-2 w-full text-center">Reaktionsgefäß (Makro- & Mikroskopisch)</h3>
+                    <!-- Gefäß mit dynamischem Hintergrund -->
+                    <div id="vesselBackground" class="relative w-full h-[350px] lg:h-[450px] bg-white rounded-t-full border-4 border-b-8 border-slate-300 overflow-hidden shadow-inner">
+                        <canvas id="particleCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <!-- Graph (Unten) -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col flex-grow">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700 w-full text-center">Konzentrations-Zeit-Diagramm</h3>
+                    </div>
+                    
+                    <!-- Live Counter -->
+                    <div class="grid grid-cols-2 gap-4 mb-4 text-center text-sm font-bold uppercase tracking-wider">
+                        <div class="bg-amber-50 p-3 rounded border-b-4 border-amber-700 text-amber-900">
+                            NO<sub>2</sub> Konzentration<br><span id="countNO2" class="text-2xl">0</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded border-b-4 border-slate-400 text-slate-700">
+                            N<sub>2</sub>O<sub>4</sub> Konzentration<br><span id="countN2O4" class="text-2xl">0</span>
+                        </div>
+                    </div>
+
+                    <div class="w-full flex-grow relative" style="min-height: 250px;">
+                        <canvas id="chartCanvas" class="w-full h-full absolute inset-0"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Definitionen ---
+        const TYPES = {
+            NO2: 0,
+            N2O4: 1
+        };
+
+        const PROPS = {
+            [TYPES.NO2]: { color: '#92400E', radius: 6, mass: 1 },
+            [TYPES.N2O4]: { color: '#F8FAFC', outline: '#CBD5E1', radius: 9, mass: 2 } // Radius proportional zur Masse
+        };
+
+        // --- State Management ---
+        let state = {
+            particles: [],
+            rawHistory: { [TYPES.NO2]: [], [TYPES.N2O4]: [] },
+            history: { [TYPES.NO2]: [], [TYPES.N2O4]: [] },
+            time: 0,
+            isPlaying: false,
+            speedMult: 1,
+            animFrameId: null,
+            chartUpdateTimer: 0,
+            totalNO2Equivalents: 0
+        };
+
+        let params = {
+            temperature: 30, // 0 - 100
+            baseSpeed: 1.5,
+            dimerizeProb: 0.15 // Konstante Wahrscheinlichkeit bei Kollision
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            startNO2: document.getElementById('startNO2'),
+            startN2O4: document.getElementById('startN2O4'),
+            tempSlider: document.getElementById('tempSlider'),
+            tempVal: document.getElementById('tempVal'),
+            btnPlay: document.getElementById('btnPlay'),
+            btnSpeed: document.getElementById('btnSpeed'),
+            btnReset: document.getElementById('btnReset'),
+            vesselBackground: document.getElementById('vesselBackground'),
+            particleCanvas: document.getElementById('particleCanvas'),
+            chartCanvas: document.getElementById('chartCanvas'),
+            counts: {
+                [TYPES.NO2]: document.getElementById('countNO2'),
+                [TYPES.N2O4]: document.getElementById('countN2O4')
+            }
+        };
+
+        const pCtx = els.particleCanvas.getContext('2d');
+        const cCtx = els.chartCanvas.getContext('2d');
+
+        // --- Initialization ---
+        function init() {
+            resizeCanvases();
+            window.addEventListener('resize', resizeCanvases);
+            bindEvents();
+            resetSimulation();
+        }
+
+        function resizeCanvases() {
+            const dpr = window.devicePixelRatio || 1;
+            
+            const pRect = els.particleCanvas.parentElement.getBoundingClientRect();
+            els.particleCanvas.width = pRect.width * dpr;
+            els.particleCanvas.height = pRect.height * dpr;
+            pCtx.scale(dpr, dpr);
+
+            const cRect = els.chartCanvas.parentElement.getBoundingClientRect();
+            els.chartCanvas.width = cRect.width * dpr;
+            els.chartCanvas.height = cRect.height * dpr;
+            cCtx.scale(dpr, dpr);
+            
+            if(!state.isPlaying) {
+                drawParticles();
+                drawChart();
+            }
+        }
+
+        function bindEvents() {
+            els.tempSlider.addEventListener('input', () => {
+                let temp = parseInt(els.tempSlider.value);
+                els.tempVal.innerText = temp + ' °C';
+                
+                // Color Code for UI
+                if(temp < 20) els.tempVal.className = "text-blue-600";
+                else if(temp < 60) els.tempVal.className = "text-orange-500";
+                else els.tempVal.className = "text-red-600";
+                
+                readParams();
+            });
+
+            els.btnPlay.addEventListener('click', togglePlay);
+            els.btnSpeed.addEventListener('click', () => {
+                state.speedMult = state.speedMult === 1 ? 2 : 1;
+                if (state.speedMult === 2) {
+                    els.btnSpeed.innerText = "⏩ Normalgeschwindigkeit";
+                    els.btnSpeed.classList.replace('bg-blue-100', 'bg-blue-300');
+                    els.btnSpeed.classList.replace('hover:bg-blue-200', 'hover:bg-blue-400');
+                } else {
+                    els.btnSpeed.innerText = "⏩ 2x Geschwindigkeit";
+                    els.btnSpeed.classList.replace('bg-blue-300', 'bg-blue-100');
+                    els.btnSpeed.classList.replace('hover:bg-blue-400', 'hover:bg-blue-200');
+                }
+            });
+            els.btnReset.addEventListener('click', resetSimulation);
+        }
+
+        // --- Particle Engine ---
+        class Particle {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.radius = PROPS[type].radius;
+                this.mass = PROPS[type].mass;
+                
+                // Kinetische Energie ist proportional zur Temperatur
+                // T = 0 -> 273K, T = 100 -> 373K. Vereinfachte Skalierung:
+                let tempScale = 0.5 + (params.temperature / 100) * 1.5;
+                let targetSpeed = params.baseSpeed * tempScale;
+                // Schwerere Teilchen (N2O4) bewegen sich im Schnitt langsamer
+                targetSpeed = targetSpeed / Math.sqrt(this.mass);
+                
+                let angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * targetSpeed;
+                this.vy = Math.sin(angle) * targetSpeed;
+            }
+        }
+
+        function readParams() {
+            params.temperature = parseInt(els.tempSlider.value);
+            
+            // Updates velocities instantly if temp changes
+            let tempScale = 0.5 + (params.temperature / 100) * 1.5;
+            for(let p of state.particles) {
+                let currentMag = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+                let targetSpeed = (params.baseSpeed * tempScale) / Math.sqrt(p.mass);
+                
+                if(currentMag > 0) {
+                    p.vx = (p.vx / currentMag) * targetSpeed;
+                    p.vy = (p.vy / currentMag) * targetSpeed;
+                }
+            }
+            updateMacroscopicColor();
+        }
+
+        function resetSimulation() {
+            if(state.isPlaying) togglePlay();
+            
+            state.particles = [];
+            state.time = 0;
+            state.chartUpdateTimer = 0;
+            
+            const pWidth = els.particleCanvas.width / (window.devicePixelRatio || 1);
+            const pHeight = els.particleCanvas.height / (window.devicePixelRatio || 1);
+            
+            let no2Count = parseInt(els.startNO2.value) || 0;
+            let n2o4Count = parseInt(els.startN2O4.value) || 0;
+            
+            state.totalNO2Equivalents = no2Count + (n2o4Count * 2);
+
+            for(let i=0; i<no2Count; i++) {
+                let r = PROPS[TYPES.NO2].radius;
+                state.particles.push(new Particle(r + Math.random() * (pWidth - 2*r), r + Math.random() * (pHeight - 2*r), TYPES.NO2));
+            }
+            for(let i=0; i<n2o4Count; i++) {
+                let r = PROPS[TYPES.N2O4].radius;
+                state.particles.push(new Particle(r + Math.random() * (pWidth - 2*r), r + Math.random() * (pHeight - 2*r), TYPES.N2O4));
+            }
+
+            // Reset History
+            let counts = countParticles();
+            state.rawHistory[TYPES.NO2] = [counts[TYPES.NO2]];
+            state.rawHistory[TYPES.N2O4] = [counts[TYPES.N2O4]];
+            state.history[TYPES.NO2] = [counts[TYPES.NO2]];
+            state.history[TYPES.N2O4] = [counts[TYPES.N2O4]];
+
+            readParams();
+            updateUI();
+            updateMacroscopicColor();
+            drawParticles();
+            drawChart();
+        }
+
+        function togglePlay() {
+            state.isPlaying = !state.isPlaying;
+            if (state.isPlaying) {
+                els.btnPlay.innerText = "⏸ Pausieren";
+                els.btnPlay.classList.replace('bg-emerald-600', 'bg-amber-600');
+                els.btnPlay.classList.replace('hover:bg-emerald-700', 'hover:bg-amber-700');
+                gameLoop();
+            } else {
+                els.btnPlay.innerText = "▶ Simulation fortsetzen";
+                els.btnPlay.classList.replace('bg-amber-600', 'bg-emerald-600');
+                els.btnPlay.classList.replace('hover:bg-amber-700', 'hover:bg-emerald-700');
+                cancelAnimationFrame(state.animFrameId);
+            }
+        }
+
+        function updateMacroscopicColor() {
+            // Berechnet die Färbung des Hintergrunds als visuelle Unterstützung
+            let counts = countParticles();
+            let ratio = 0;
+            if (state.totalNO2Equivalents > 0) {
+                ratio = counts[TYPES.NO2] / state.totalNO2Equivalents;
+            }
+            
+            // Map Ratio to an Alpha value for a brown color
+            // 0% NO2 = Alpha 0 (White/Clear)
+            // 100% NO2 = Alpha 0.5 (Strong Brown)
+            let alpha = ratio * 0.6;
+            els.vesselBackground.style.backgroundColor = `rgba(146, 64, 14, ${alpha})`;
+        }
+
+        // --- Physics & Reaction Logic ---
+        function updatePhysics() {
+            const pWidth = els.particleCanvas.width / (window.devicePixelRatio || 1);
+            const pHeight = els.particleCanvas.height / (window.devicePixelRatio || 1);
+
+            let nextParticles = [];
+            let toRemove = new Set();
+
+            // 1. Unimolekularer Zerfall (N2O4 -> 2 NO2)
+            // Reaktionsrate ist stark temperaturabhängig (Arrhenius-Näherung)
+            // Bei 0°C sehr gering, bei 100°C sehr hoch.
+            let tempFactor = params.temperature / 100; // 0 to 1
+            let decompRate = 0.0005 + 0.04 * Math.pow(tempFactor, 2.5);
+
+            for (let p of state.particles) {
+                if (p.type === TYPES.N2O4) {
+                    if (Math.random() < decompRate) {
+                        toRemove.add(p);
+                        
+                        // 2 NO2 Teilchen entstehen an der Stelle
+                        let p1 = new Particle(p.x, p.y, TYPES.NO2);
+                        let p2 = new Particle(p.x, p.y, TYPES.NO2);
+                        
+                        // Sie fliegen mit leichtem Zusatzimpuls in entgegengesetzte Richtungen auseinander
+                        let angle = Math.random() * Math.PI * 2;
+                        let separationSpeed = 1.0;
+                        p1.vx = p.vx + Math.cos(angle) * separationSpeed;
+                        p1.vy = p.vy + Math.sin(angle) * separationSpeed;
+                        p2.vx = p.vx - Math.cos(angle) * separationSpeed;
+                        p2.vy = p.vy - Math.sin(angle) * separationSpeed;
+                        
+                        // Verhindern von aus dem Bild fliegen direkt nach Spawn
+                        p1.x = Math.max(p1.radius, Math.min(pWidth - p1.radius, p1.x + p1.vx));
+                        p1.y = Math.max(p1.radius, Math.min(pHeight - p1.radius, p1.y + p1.vy));
+                        p2.x = Math.max(p2.radius, Math.min(pWidth - p2.radius, p2.x + p2.vx));
+                        p2.y = Math.max(p2.radius, Math.min(pHeight - p2.radius, p2.y + p2.vy));
+
+                        nextParticles.push(p1, p2);
+                    }
+                }
+            }
+
+            // 2. Bewegung & Wandkollision für alle überlebenden Teilchen
+            for (let p of state.particles) {
+                if(toRemove.has(p)) continue;
+                
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x - p.radius < 0) { p.x = p.radius; p.vx *= -1; }
+                if (p.x + p.radius > pWidth) { p.x = pWidth - p.radius; p.vx *= -1; }
+                if (p.y - p.radius < 0) { p.y = p.radius; p.vy *= -1; }
+                if (p.y + p.radius > pHeight) { p.y = pHeight - p.radius; p.vy *= -1; }
+            }
+
+            // 3. Teilchen-Kollisionen & Bimolekulare Dimerisierung (2 NO2 -> N2O4)
+            for (let i = 0; i < state.particles.length; i++) {
+                let p1 = state.particles[i];
+                if (toRemove.has(p1)) continue;
+
+                for (let j = i + 1; j < state.particles.length; j++) {
+                    let p2 = state.particles[j];
+                    if (toRemove.has(p2)) continue;
+
+                    let dx = p2.x - p1.x;
+                    let dy = p2.y - p1.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    let minDist = p1.radius + p2.radius;
+
+                    if (distance < minDist) {
+                        // Reaktion Check (nur 2x NO2 können reagieren)
+                        if (p1.type === TYPES.NO2 && p2.type === TYPES.NO2) {
+                            if (Math.random() < params.dimerizeProb) {
+                                toRemove.add(p1);
+                                toRemove.add(p2);
+                                
+                                let pNew = new Particle((p1.x + p2.x)/2, (p1.y + p2.y)/2, TYPES.N2O4);
+                                // Impulserhaltung: m1*v1 + m2*v2 = (m1+m2)*v_neu
+                                pNew.vx = (p1.mass * p1.vx + p2.mass * p2.vx) / pNew.mass;
+                                pNew.vy = (p1.mass * p1.vy + p2.mass * p2.vy) / pNew.mass;
+                                
+                                nextParticles.push(pNew);
+                                break; // p1 ist verbraucht, weitere Kollisionschecks für p1 stoppen
+                            }
+                        }
+
+                        // Elastischer Stoß für alle anderen Kombinationen / Fehlschläge
+                        let overlap = minDist - distance;
+                        let nx = dx / distance;
+                        let ny = dy / distance;
+                        
+                        // Push apart based on mass ratio
+                        let totalMass = p1.mass + p2.mass;
+                        let p1MoveRatio = p2.mass / totalMass;
+                        let p2MoveRatio = p1.mass / totalMass;
+                        
+                        p1.x -= nx * (overlap * p1MoveRatio);
+                        p1.y -= ny * (overlap * p1MoveRatio);
+                        p2.x += nx * (overlap * p2MoveRatio);
+                        p2.y += ny * (overlap * p2MoveRatio);
+
+                        let kx = (p1.vx - p2.vx);
+                        let ky = (p1.vy - p2.vy);
+                        let p_coll = 2.0 * (nx * kx + ny * ky) / totalMass;
+                        
+                        p1.vx = p1.vx - p_coll * p2.mass * nx;
+                        p1.vy = p1.vy - p_coll * p2.mass * ny;
+                        p2.vx = p2.vx + p_coll * p1.mass * nx;
+                        p2.vy = p2.vy + p_coll * p1.mass * ny;
+                    }
+                }
+            }
+
+            // Neue Liste zusammenstellen
+            for (let p of state.particles) {
+                if (!toRemove.has(p)) nextParticles.push(p);
+            }
+            state.particles = nextParticles;
+        }
+
+        function countParticles() {
+            let counts = { [TYPES.NO2]:0, [TYPES.N2O4]:0 };
+            for(let p of state.particles) counts[p.type]++;
+            return counts;
+        }
+
+        function updateHistoryData() {
+            state.time++;
+            let counts = countParticles();
+            
+            state.rawHistory[TYPES.NO2].push(counts[TYPES.NO2]);
+            state.rawHistory[TYPES.N2O4].push(counts[TYPES.N2O4]);
+            
+            // Stärkere Glättung für ein optimaleres GGW-Bild (Moving Average über die letzten 40 Frames)
+            let sliceNO2 = state.rawHistory[TYPES.NO2].slice(-40);
+            let avgNO2 = sliceNO2.reduce((s, v) => s + v, 0) / sliceNO2.length;
+            state.history[TYPES.NO2].push(avgNO2);
+
+            let sliceN2O4 = state.rawHistory[TYPES.N2O4].slice(-40);
+            let avgN2O4 = sliceN2O4.reduce((s, v) => s + v, 0) / sliceN2O4.length;
+            state.history[TYPES.N2O4].push(avgN2O4);
+        }
+
+        // --- Rendering ---
+        function drawParticles() {
+            const width = els.particleCanvas.width / window.devicePixelRatio;
+            const height = els.particleCanvas.height / window.devicePixelRatio;
+            
+            pCtx.clearRect(0, 0, width, height);
+            
+            for (let p of state.particles) {
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                pCtx.fillStyle = PROPS[p.type].color;
+                pCtx.fill();
+                
+                pCtx.lineWidth = 2;
+                if(PROPS[p.type].outline) {
+                    pCtx.strokeStyle = PROPS[p.type].outline;
+                } else {
+                    pCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+                }
+                pCtx.stroke();
+            }
+        }
+
+        function drawChart() {
+            const width = els.chartCanvas.width / window.devicePixelRatio;
+            const height = els.chartCanvas.height / window.devicePixelRatio;
+            
+            cCtx.clearRect(0, 0, width, height);
+            
+            const padX = 40;
+            const padY = 20;
+            const chartW = width - padX - 10;
+            const chartH = height - padY * 2;
+            
+            cCtx.lineWidth = 1;
+            cCtx.strokeStyle = '#e2e8f0';
+            cCtx.fillStyle = '#64748b';
+            cCtx.font = '10px sans-serif';
+            cCtx.textAlign = 'right';
+            cCtx.textBaseline = 'middle';
+            
+            const maxVal = Math.max(state.totalNO2Equivalents, 20);
+            const steps = 4;
+            
+            for(let i=0; i<=steps; i++) {
+                let y = (height - padY) - (i/steps) * chartH;
+                
+                cCtx.beginPath();
+                cCtx.moveTo(padX, y);
+                cCtx.lineTo(width, y);
+                cCtx.stroke();
+                
+                cCtx.fillText(Math.round((i/steps) * maxVal), padX - 5, y);
+            }
+
+            const drawLine = (historyArray, color, lineDash = []) => {
+                if (historyArray.length === 0) return;
+                
+                cCtx.beginPath();
+                let xMax = Math.max(state.time, 100); 
+                cCtx.setLineDash(lineDash);
+                
+                for (let i = 0; i < historyArray.length; i++) {
+                    const x = padX + (i / xMax) * chartW;
+                    const y = (height - padY) - (historyArray[i] / maxVal) * chartH;
+                    if (i === 0) cCtx.moveTo(x, y);
+                    else cCtx.lineTo(x, y);
+                }
+                cCtx.strokeStyle = color;
+                cCtx.lineWidth = 3;
+                cCtx.lineJoin = 'round';
+                cCtx.stroke();
+                cCtx.setLineDash([]); // reset
+            };
+            
+            drawLine(state.history[TYPES.NO2], PROPS[TYPES.NO2].color);
+            // N2O4 Line
+            drawLine(state.history[TYPES.N2O4], '#64748b'); // Draw grey line for N2O4
+            
+            cCtx.fillStyle = '#64748b';
+            cCtx.textAlign = 'center';
+            cCtx.fillText("Zeit", padX + chartW/2, height - 5);
+        }
+
+        function updateUI() {
+            let lastIdx = state.history[TYPES.NO2].length - 1;
+            if(lastIdx >= 0) {
+                els.counts[TYPES.NO2].innerText = Math.round(state.history[TYPES.NO2][lastIdx]);
+                els.counts[TYPES.N2O4].innerText = Math.round(state.history[TYPES.N2O4][lastIdx]);
+            }
+        }
+
+        // --- Main Loop ---
+        function gameLoop() {
+            if (!state.isPlaying) return;
+
+            // Führe Physik Updates je nach Geschwindigkeits-Multiplikator aus
+            for(let i=0; i < state.speedMult; i++) {
+                updatePhysics();
+            }
+            drawParticles();
+
+            state.chartUpdateTimer += state.speedMult;
+            if (state.chartUpdateTimer >= 8) { 
+                updateHistoryData();
+                updateUI();
+                updateMacroscopicColor();
+                drawChart();
+                state.chartUpdateTimer = 0;
+            }
+
+            state.animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Boot
+        window.onload = init;
+    </script>
+</body>
+</html>

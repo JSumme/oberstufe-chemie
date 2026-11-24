@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EduApp: Elektrochemie</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#3d7c47', secondary: '#8bb29c', light: '#dfeae3', accent: '#b6964a', bgcolor: '#f4f8f6' },
+                    borderRadius: { '3xl': '1.5rem', '4xl': '2rem' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f4f8f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease-out; }
+        .tab-content.active { display: block; }
+        .reveal-anim { animation: slideDownFade 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDownFade { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        .pop-anim { animation: popIn 0.3s ease-out; }
+        .btn-tap { transition: all 0.2s ease-in-out; }
+        .btn-tap:active { transform: scale(0.96); }
+        .btn-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%233d7c47" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position-x: 96%; background-position-y: center; padding-right: 2.25rem; max-width: 100%; transition: border-color 0.2s; }
+        select:focus { border-color: #8bb29c; }
+        .quiz-option { background-color: white; border: 2px solid #dfeae3; color: #3d7c47; padding: 1rem; border-radius: 1rem; font-weight: 600; text-align: left; transition: all 0.2s ease; display: flex; align-items: center; }
+        .quiz-option:disabled { cursor: default; transform: none !important; box-shadow: none !important; }
+        .quiz-option.correct { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
+        .quiz-option.wrong { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        details.hint-accordion summary::-webkit-details-marker { display:none; }
+        .formula { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+        .num-input { font-family: ui-monospace, Menlo, monospace; text-align:center; letter-spacing:.05em; }
+        .num-input:focus { outline:none; border-color:#3d7c47; box-shadow:0 0 0 3px rgba(61,124,71,.15); }
+        .electron { animation: zap 1s ease-in-out infinite; }
+        @keyframes zap { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+        @keyframes flowRight { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+        .sr-row { transition: background-color .2s, transform .2s; }
+        .sr-row.sel-a { background:#fee2e2 !important; box-shadow: inset 3px 0 0 #dc2626; }
+        .sr-row.sel-b { background:#dbeafe !important; box-shadow: inset 3px 0 0 #1d4ed8; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden" onload="initApp()">
+
+    <!-- Kopfzeile & Navigation -->
+    <header class="bg-primary text-white py-3 md:py-4 px-4 md:px-6 rounded-b-3xl shadow-lg z-50 flex-shrink-0">
+        <div class="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <h1 class="text-lg md:text-2xl font-bold flex items-center gap-2 overflow-hidden mr-1">
+                <i data-lucide="battery-charging" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i>
+                <span class="truncate hidden sm:inline">Elektrochemie</span>
+            </h1>
+            <nav class="flex gap-1.5 md:gap-2 flex-shrink-0">
+                <button onclick="switchTab('zellen')" id="nav-zellen" title="Galvanische Zellen" class="btn-tap btn-hover bg-white text-primary w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold shadow flex items-center justify-center flex-shrink-0"><i data-lucide="zap" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('reihe')" id="nav-reihe" title="Spannungsreihe" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="list-ordered" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('spannung')" id="nav-spannung" title="Zellspannung berechnen" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="calculator" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('batterien')" id="nav-batterien" title="Batterien" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="battery" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('akkus')" id="nav-akkus" title="Akkumulatoren" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="refresh-cw" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('training')" id="nav-training" title="Training & Klausur" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="graduation-cap" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('glossar')" id="nav-glossar" title="Fachsprache & Glossar" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="languages" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+            </nav>
+        </div>
+    </header>
+
+    <main id="mainScrollArea" class="flex-grow overflow-y-auto p-4 md:p-6">
+        <div class="max-w-4xl mx-auto pb-24">
+
+            <!-- ============ REITER 1: GALVANISCHE ZELLEN ============ -->
+            <div id="tab-zellen" class="tab-content active">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Galvanische Zellen</h2>
+                    <p class="text-gray-600">Wie aus einer Redoxreaktion eine Spannungsquelle wird</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-gz-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="book-open" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Vom Zinkstab zur Spannungsquelle</span>
+                        <i data-lucide="chevron-down" id="acc-gz-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-gz-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Taucht man einen Zinkstab direkt in eine Kupfer(II)-sulfat-Lösung, scheidet sich Kupfer am Zink ab. Der Elektronenübergang findet unmittelbar an der Zinkoberfläche statt und ist <strong>nicht als Strom nutzbar</strong>:</p>
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5 mb-5">
+                            <div class="formula text-sm space-y-1.5">
+                                <p><span class="text-red-700 font-bold">Oxidation:</span> &nbsp;Zn → Zn²⁺ + 2 e⁻</p>
+                                <p><span class="text-blue-700 font-bold">Reduktion:</span> Cu²⁺ + 2 e⁻ → Cu</p>
+                                <p class="border-t border-gray-300 pt-1.5 font-bold text-gray-800">Redoxreaktion: Zn + Cu²⁺ → Zn²⁺ + Cu</p>
+                            </div>
+                        </div>
+                        <div class="bg-light text-[#2f6137] p-5 rounded-xl border-l-4 border-primary font-medium mb-5">
+                            Eine <strong>galvanische Zelle</strong> macht eine Redoxreaktion als Spannungsquelle nutzbar. In ihr laufen eine Oxidation und eine Reduktion <strong>räumlich getrennt</strong> ab.
+                        </div>
+                        <p class="text-gray-700 mb-4">Dafür wird die Reaktion auf zwei <strong>Halbzellen</strong> aufgeteilt, die durch ein <strong>Diaphragma</strong> (poröse Trennwand) oder eine Salzbrücke verbunden sind. Ein Elektronenleiter, der in eine Elektrolytlösung taucht, heißt <strong>Elektrode</strong>.</p>
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-5">
+                                <h4 class="font-bold text-red-800 mb-2 flex items-center gap-2"><i data-lucide="upload" class="w-5 h-5"></i> Anode</h4>
+                                <p class="text-sm text-red-900">Hier werden Teilchen <strong>oxidiert</strong>. Die Elektronen treten hier in den Leitungsdraht aus, die Anode ist deshalb der <strong>Minuspol</strong>.</p>
+                            </div>
+                            <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5">
+                                <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2"><i data-lucide="download" class="w-5 h-5"></i> Kathode</h4>
+                                <p class="text-sm text-blue-900">Hier werden Teilchen <strong>reduziert</strong>. Die Kathode ist bei der galvanischen Zelle der <strong>Pluspol</strong>.</p>
+                            </div>
+                        </div>
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl">
+                            <p class="text-amber-900 text-sm"><strong>Merkhilfe:</strong> An der <strong>A</strong>node findet die <strong>O</strong>xidation statt — beide Wörter beginnen mit einem Vokal. An der <strong>K</strong>athode findet die <strong>R</strong>eduktion statt — beide mit einem Konsonanten.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-gz-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="play-circle" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Daniell-Element: Simulator</span>
+                        <i data-lucide="chevron-down" id="acc-gz-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-gz-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-600 text-sm mb-4 mt-4">Schließe den Stromkreis und verfolge, was an beiden Elektroden und im Diaphragma passiert.</p>
+                        <div id="daniellContainer"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-gz-3')">
+                        <span class="flex items-center gap-3"><i data-lucide="pen-line" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Zellnotation</span>
+                        <i data-lucide="chevron-down" id="acc-gz-3-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-gz-3-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Eine galvanische Zelle lässt sich kurz als <strong>Zellnotation</strong> schreiben. Dabei gilt eine feste Reihenfolge: <strong>Anode | Anodenlösung ‖ Kathodenlösung | Kathode</strong>.</p>
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5 mb-4 overflow-x-auto">
+                            <div class="formula font-bold text-center text-sm md:text-lg whitespace-nowrap mb-3">
+                                <span class="bg-red-100 text-red-800 px-2 py-1 rounded">Zn</span>
+                                <span class="text-gray-400 mx-1">|</span>
+                                <span class="bg-red-100 text-red-800 px-2 py-1 rounded">Zn²⁺</span>
+                                <span class="text-primary mx-1.5 font-black">‖</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">Cu²⁺</span>
+                                <span class="text-gray-400 mx-1">|</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">Cu</span>
+                            </div>
+                            <div class="grid sm:grid-cols-3 gap-2 text-xs">
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-2.5"><strong class="text-red-800">Links die Anode</strong><br><span class="text-red-900">Dort läuft die Oxidation ab, sie ist der Minuspol.</span></div>
+                                <div class="bg-light border border-[#dfeae3] rounded-lg p-2.5"><strong class="text-[#2f6137]">Doppelstrich ‖</strong><br><span class="text-[#2f6137]">kennzeichnet Diaphragma oder Salzbrücke.</span></div>
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5"><strong class="text-blue-800">Rechts die Kathode</strong><br><span class="text-blue-900">Dort läuft die Reduktion ab, sie ist der Pluspol.</span></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-3 text-center">Der einfache Strich | steht für eine Phasengrenze.</p>
+                        </div>
+                        <details class="group bg-amber-50 rounded-xl border border-amber-200 hint-accordion mb-4">
+                            <summary class="flex justify-between items-center font-bold cursor-pointer p-3 text-sm text-amber-900 hover:bg-amber-100 rounded-xl transition"><span><i data-lucide="info" class="inline w-4 h-4 mr-2"></i>Im Buch sieht die Schreibweise anders aus</span><i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i></summary>
+                            <div class="p-3 pt-0 text-sm text-amber-900 border-t border-amber-200/60 mt-1">
+                                Das Buch verwendet Schrägstriche und nennt statt der Ionen die Salze, zum Beispiel
+                                <span class="formula font-bold whitespace-nowrap">Zn/ZnSO₄ (c = 1 mol/l) // CuSO₄ (c = 1 mol/l)/Cu</span>.
+                                Gemeint ist genau dasselbe: einfacher Strich = Phasengrenze, doppelter Strich = Diaphragma.
+                                <strong>In dieser App und im Unterricht nutzen wir die Schreibweise mit | und ‖.</strong>
+                            </div>
+                        </details>
+                        <div id="notationQuizArea"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-gz-4')">
+                        <span class="flex items-center gap-3"><i data-lucide="layers" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Lösungstension & Doppelschicht</span>
+                        <i data-lucide="chevron-down" id="acc-gz-4-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-gz-4-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Warum entsteht überhaupt eine Spannung? Jedes Metall hat die Fähigkeit, in wässriger Lösung Ionen zu bilden — diese Fähigkeit heißt <strong>Lösungstension</strong> und ist von Metall zu Metall verschieden.</p>
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                                <h4 class="font-bold text-gray-800 text-sm mb-2">1. Ionen gehen in Lösung</h4>
+                                <p class="text-sm text-gray-700">Treten Metall-Ionen aus der Oberfläche in die Lösung über, bleiben ihre Elektronen im Metall zurück. Das Metall lädt sich dadurch <strong>negativ</strong> auf.</p>
+                            </div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                                <h4 class="font-bold text-gray-800 text-sm mb-2">2. Ein Gleichgewicht stellt sich ein</h4>
+                                <p class="text-sm text-gray-700">Das entstehende elektrische Feld zieht Kationen zurück zum Metall. Es bildet sich ein dynamisches Gleichgewicht — die <strong>elektrochemische Doppelschicht</strong>.</p>
+                            </div>
+                        </div>
+                        <div class="bg-light text-[#2f6137] p-4 rounded-xl border-l-4 border-primary text-sm mb-4">
+                            Die elektrochemische Doppelschicht ist eine Grenzschicht, an der sich elektrisch verschieden geladene Schichten gegenüberstehen.
+                        </div>
+                        <p class="text-gray-700 text-sm">Am Zink bilden sich <strong>mehr</strong> Ionen als am Kupfer. Am Zink bleiben also mehr Elektronen zurück — dort herrscht ein höherer „Elektronendruck". Verbindet man beide Elektroden, fließen die Elektronen vom Ort höheren zum Ort niedrigeren Elektronendrucks, also <strong>von Zink zu Kupfer</strong>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ REITER 2: SPANNUNGSREIHE ============ -->
+            <div id="tab-reihe" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Die elektrochemische Spannungsreihe</h2>
+                    <p class="text-gray-600">Standardpotenziale als Werkzeug zur Vorhersage von Redoxreaktionen</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-sr-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="target" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Die Standard-Wasserstoff-Elektrode</span>
+                        <i data-lucide="chevron-down" id="acc-sr-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-sr-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Ein Redoxpotenzial lässt sich <strong>nicht absolut messen</strong> — man misst immer nur die Spannung zwischen zwei Halbzellen. Deshalb braucht man einen gemeinsamen Bezugspunkt.</p>
+                        <div id="sheDiagram" class="mb-4"></div>
+                        <div class="bg-light text-[#2f6137] p-4 rounded-xl border-l-4 border-primary font-medium mb-5">
+                            Die <strong>Standard-Wasserstoff-Halbzelle</strong> ist die international festgelegte Bezugshalbzelle. Ihr Standardpotenzial wird definitionsgemäß auf <strong class="formula">E⁰ = 0 V</strong> festgelegt.
+                        </div>
+                        <h4 class="font-bold text-gray-800 mb-3">Standardbedingungen</h4>
+                        <div class="grid grid-cols-3 gap-3 mb-4">
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center"><i data-lucide="thermometer" class="w-5 h-5 mx-auto mb-1 text-primary"></i><p class="formula font-bold text-sm">ϑ = 25 °C</p><p class="text-xs text-gray-500">Temperatur</p></div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center"><i data-lucide="gauge" class="w-5 h-5 mx-auto mb-1 text-primary"></i><p class="formula font-bold text-sm">p = 1000 hPa</p><p class="text-xs text-gray-500">Druck der Gase</p></div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center"><i data-lucide="beaker" class="w-5 h-5 mx-auto mb-1 text-primary"></i><p class="formula font-bold text-sm">c = 1 mol/l</p><p class="text-xs text-gray-500">Konzentration</p></div>
+                        </div>
+                        <p class="text-gray-700 text-sm">Die Spannung zwischen einer Halbzelle und der Standard-Wasserstoff-Halbzelle unter Standardbedingungen ist das <strong>Standardpotenzial E⁰</strong>. Halbzellen, die gegen die Wasserstoff-Halbzelle den Minuspol bilden, bekommen ein <strong>negatives</strong> Vorzeichen.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-sr-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="table-2" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Die Spannungsreihe im Überblick</span>
+                        <i data-lucide="chevron-down" id="acc-sr-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-sr-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Ordnet man alle Redoxpaare nach ihrem Standardpotenzial, erhält man die <strong>elektrochemische Spannungsreihe</strong>. Tippe auf eine Zeile, um die Einordnung zu sehen.</p>
+                        <div id="spannungsreiheTable"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-sr-3')">
+                        <span class="flex items-center gap-3"><i data-lucide="trending-down" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Bergab-Regel: Läuft die Reaktion ab?</span>
+                        <i data-lucide="chevron-down" id="acc-sr-3-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-sr-3-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div class="bg-light text-[#2f6137] p-4 rounded-xl border-l-4 border-primary font-medium mb-4 mt-4">
+                            <strong>Bergab-Regel:</strong> Elektronen gehen immer „bergab" — vom in der Spannungsreihe <strong>höher</strong> stehenden Redoxpaar auf das <strong>weiter unten</strong> stehende.
+                        </div>
+                        <p class="text-gray-700 text-sm mb-5">Anders formuliert: Das Reduktionsmittel des Paares mit dem <strong>kleineren (negativeren)</strong> Standardpotenzial gibt Elektronen an das Oxidationsmittel mit dem <strong>größeren (positiveren)</strong> Standardpotenzial ab.</p>
+                        <div class="grid md:grid-cols-2 gap-4 mb-5">
+                            <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
+                                <p class="text-xs font-bold text-red-700 uppercase tracking-wider mb-1">Je negativer E⁰</p>
+                                <p class="text-sm text-red-900">… umso <strong>stärker</strong> ist das Reduktionsmittel. Unedle Metalle stehen oben und lassen sich leicht oxidieren.</p>
+                            </div>
+                            <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4">
+                                <p class="text-xs font-bold text-blue-700 uppercase tracking-wider mb-1">Je positiver E⁰</p>
+                                <p class="text-sm text-blue-900">… umso <strong>stärker</strong> ist das Oxidationsmittel. Die Ionen edler Metalle nehmen Elektronen bereitwillig auf.</p>
+                            </div>
+                        </div>
+                        <h4 class="font-bold text-gray-800 mb-3">Reaktions-Orakel</h4>
+                        <div id="orakelContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ REITER 3: ZELLSPANNUNG ============ -->
+            <div id="tab-spannung" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Zellspannung berechnen</h2>
+                    <p class="text-gray-600">Von zwei Halbzellen zu Polung, Gleichungen, Zellnotation und ΔE⁰</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-zs-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="list-ordered" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Die Methode in fünf Schritten</span>
+                        <i data-lucide="chevron-down" id="acc-zs-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-zs-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div class="bg-light border-l-4 border-primary p-4 rounded-xl mb-5 mt-4">
+                            <p class="text-[#2f6137] font-bold text-sm mb-1">Grundformel</p>
+                            <p class="formula font-bold text-[#2f6137] text-base md:text-lg">U⁰ = ΔE⁰ = E⁰(Kathode) − E⁰(Anode) = E⁰(Pluspol) − E⁰(Minuspol)</p>
+                        </div>
+                        <div class="space-y-3 mb-5">
+                            <div class="flex items-start gap-3"><span class="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center">1</span><p class="text-gray-700 text-sm pt-0.5"><strong>E⁰ nachschlagen</strong> — beide Standardpotenziale aus der Spannungsreihe entnehmen.</p></div>
+                            <div class="flex items-start gap-3"><span class="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center">2</span><p class="text-gray-700 text-sm pt-0.5"><strong>Pole zuordnen</strong> — das <em>höhere</em> E⁰ wird Kathode und Pluspol, das <em>niedrigere</em> Anode und Minuspol.</p></div>
+                            <div class="flex items-start gap-3"><span class="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center">3</span><p class="text-gray-700 text-sm pt-0.5"><strong>Teilgleichungen</strong> — Oxidation an der Anode, Reduktion an der Kathode.</p></div>
+                            <div class="flex items-start gap-3"><span class="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center">4</span><p class="text-gray-700 text-sm pt-0.5"><strong>Elektronen ausgleichen</strong> und zur Gesamtgleichung zusammenführen.</p></div>
+                            <div class="flex items-start gap-3"><span class="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center">5</span><p class="text-gray-700 text-sm pt-0.5"><strong>ΔE⁰ berechnen</strong> und die Zellnotation aufschreiben.</p></div>
+                        </div>
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl">
+                            <p class="text-amber-900 text-sm"><strong>Häufigster Fehler:</strong> das Vorzeichen. Steht an der Anode ein negatives Potenzial, wird es <em>abgezogen</em> — minus mal minus ergibt plus. Beispiel: 0,80 V − (−0,76 V) = <strong>1,56 V</strong>, nicht 0,04 V.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-zs-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="wand-2" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Zellbaukasten</span>
+                        <i data-lucide="chevron-down" id="acc-zs-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-zs-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-600 text-sm mb-4 mt-4">Wähle zwei Halbzellen und arbeite dich Schritt für Schritt durch. Jeder Schritt will erst beantwortet werden.</p>
+                        <div id="baukastenContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ REITER 4: BATTERIEN ============ -->
+            <div id="tab-batterien" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Batterien</h2>
+                    <p class="text-gray-600">Galvanische Zellen als Energiespeicher für unterwegs</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-bt-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="book-open" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Primär- und Sekundärzellen</span>
+                        <i data-lucide="chevron-down" id="acc-bt-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-bt-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Galvanische Zellen sind Energiespeicher. Bei der Entladung wird die gespeicherte chemische Energie durch eine Redoxreaktion in elektrische Energie umgewandelt. Oft schaltet man mehrere Zellen in Reihe, um die Spannung zu erhöhen — eine 9-Volt-Batterie enthält sechs 1,5-Volt-Zellen.</p>
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-gray-50 border-2 border-gray-200 rounded-2xl p-5">
+                                <h4 class="font-bold text-gray-800 mb-2">Primärzelle</h4>
+                                <p class="text-sm text-gray-700 mb-2">Kann <strong>nicht</strong> wieder aufgeladen werden. Die Elektrodenreaktionen sind nicht umkehrbar.</p>
+                                <p class="text-xs text-gray-500">z. B. Zink-Kohle, Alkali-Mangan, Knopfzellen</p>
+                            </div>
+                            <div class="bg-light border-2 border-primary rounded-2xl p-5">
+                                <h4 class="font-bold text-[#2f6137] mb-2">Sekundärzelle (Akkumulator)</h4>
+                                <p class="text-sm text-[#2f6137] mb-2">Kann wieder aufgeladen werden, weil die Elektrodenreaktionen <strong>umkehrbar</strong> sind.</p>
+                                <p class="text-xs text-[#2f6137] opacity-75">z. B. Bleiakku, NiMH, Lithium-Ionen</p>
+                            </div>
+                        </div>
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl">
+                            <p class="text-amber-900 text-sm">Wiederaufladbar ist eine Zelle nur, wenn die Entladeprodukte <strong>an der Elektrode haften bleiben</strong> und die Reaktionen sich umkehren lassen. Bei der Zink-Kohle-Batterie wird der Zinkbecher beim Entladen zerstört — deshalb lässt sie sich nicht sicher laden.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-bt-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="battery" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Batterietypen im Vergleich</span>
+                        <i data-lucide="chevron-down" id="acc-bt-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-bt-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div id="batterieContainer" class="mt-4"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-bt-3')">
+                        <span class="flex items-center gap-3"><i data-lucide="target" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Mini-Quiz: Primär oder Sekundär?</span>
+                        <i data-lucide="chevron-down" id="acc-bt-3-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-bt-3-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div id="primSekQuizArea" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ REITER 5: AKKUMULATOREN ============ -->
+            <div id="tab-akkus" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Akkumulatoren</h2>
+                    <p class="text-gray-600">Entladen und Laden als umkehrbare Elektrodenreaktionen</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-ak-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="refresh-cw" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Entladen und Laden</span>
+                        <i data-lucide="chevron-down" id="acc-ak-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-ak-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">In Akkumulatoren sind die Elektrodenreaktionen umkehrbar. Beim <strong>Entladen</strong> läuft die Redoxreaktion freiwillig ab — der Akku arbeitet als galvanische Zelle. Beim <strong>Laden</strong> wird sie durch eine äußere Spannung erzwungen; die Vorgänge entsprechen dann einer Elektrolyse.</p>
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl mb-4">
+                            <p class="text-amber-900 text-sm"><strong>Achtung bei den Begriffen:</strong> Die <em>Pole</em> bleiben beim Laden gleich, aber Anode und Kathode tauschen. Beim Entladen ist der Minuspol die Anode, beim Laden ist der <strong>Pluspol</strong> die Anode — denn die Oxidation findet immer an der Anode statt.</p>
+                        </div>
+                        <p class="text-gray-700 text-sm">Im folgenden Simulator kannst du zwischen Entladen und Laden umschalten und siehst, wie sich Gleichungen und Benennung ändern.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-ak-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="toggle-left" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Akku-Simulator</span>
+                        <i data-lucide="chevron-down" id="acc-ak-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-ak-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div id="akkuContainer" class="mt-4"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-ak-3')">
+                        <span class="flex items-center gap-3"><i data-lucide="scale" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Energiespeicher bewerten</span>
+                        <i data-lucide="chevron-down" id="acc-ak-3-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-ak-3-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Für den Operator <strong>Bewerten</strong> reicht es nicht, Daten aufzuzählen. Du musst Kriterien <em>gewichten</em> und auf den Anwendungsfall beziehen.</p>
+                        <div id="vergleichContainer" class="mb-5"></div>
+                        <div class="bg-light border-l-4 border-primary p-4 rounded-xl">
+                            <p class="text-[#2f6137] font-bold text-sm mb-2">Gerüst für eine Stellungnahme</p>
+                            <ol class="list-decimal list-inside text-sm text-[#2f6137] space-y-1">
+                                <li>Kriterium nennen</li>
+                                <li>Fakten aus der Tabelle anführen</li>
+                                <li>Für den Anwendungsfall gewichten</li>
+                                <li>Fazit ziehen</li>
+                            </ol>
+                            <p class="text-xs text-[#2f6137] opacity-80 mt-2">Satzbaustein: „Unter dem Kriterium … ist … vorteilhaft, weil …"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ REITER 6: TRAINING ============ -->
+            <div id="tab-training" class="tab-content">
+                <div id="trOverview"></div>
+                <div id="trDetail" class="hidden"></div>
+            </div>
+
+            <!-- ============ REITER 7: GLOSSAR ============ -->
+            <div id="tab-glossar" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Fachsprache & Glossar</h2>
+                    <p class="text-gray-600">Alle Fachbegriffe der Einheit im Überblick (DE–EN)</p>
+                </div>
+                <div class="relative mb-6">
+                    <i data-lucide="search" class="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" id="glossarSearch" oninput="filterGlossar()" placeholder="Begriff suchen..." class="w-full bg-white border-2 border-gray-200 rounded-2xl p-4 pl-12 outline-none focus:border-primary transition shadow-sm">
+                </div>
+                <div id="glossarList" class="space-y-3"></div>
+                <p id="glossarEmpty" class="hidden text-center text-gray-400 py-8">Kein Begriff gefunden.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+    // ================== KERN ==================
+    function initApp() {
+        lucide.createIcons();
+        renderDaniell();
+        renderNotationQuiz();
+        renderSHE();
+        renderSpannungsreihe();
+        renderOrakel();
+        renderBaukasten();
+        renderBatterien();
+        renderPrimSekQuiz();
+        renderAkku();
+        renderVergleich();
+        renderTraining();
+        renderGlossar();
+        lucide.createIcons();
+    }
+    function switchTab(tab) {
+        const wasActive = document.getElementById('tab-' + tab).classList.contains('active');
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.querySelectorAll('header nav button').forEach(b => {
+            b.classList.remove('bg-white', 'text-primary', 'shadow');
+            b.classList.add('bg-secondary', 'bg-opacity-30', 'text-white');
+        });
+        const b = document.getElementById('nav-' + tab);
+        b.classList.remove('bg-secondary', 'bg-opacity-30', 'text-white');
+        b.classList.add('bg-white', 'text-primary', 'shadow');
+        document.getElementById('mainScrollArea').scrollTop = 0;
+        if (tab === 'training' && wasActive && trOpen) closeTrain();
+    }
+    function toggleAccordion(id) {
+        const c = document.getElementById(id + '-content'), i = document.getElementById(id + '-icon');
+        if (!c.classList.contains('hidden')) { c.classList.add('hidden'); if (i) i.style.transform = 'rotate(0deg)'; return; }
+        document.querySelectorAll('[id^="acc-"][id$="-content"]').forEach(o => {
+            if (o === c || o.classList.contains('hidden')) return;
+            o.classList.add('hidden');
+            const oi = document.getElementById(o.id.replace(/-content$/, '-icon'));
+            if (oi) oi.style.transform = 'rotate(0deg)';
+        });
+        c.classList.remove('hidden'); if (i) i.style.transform = 'rotate(180deg)';
+        const main = document.getElementById('mainScrollArea');
+        const top = c.parentElement.getBoundingClientRect().top - main.getBoundingClientRect().top;
+        if (top < 0) main.scrollTop += top - 12;
+    }
+    const memStore = {};
+    function store(k, v) { memStore[k] = v; try { localStorage.setItem('k12echem_' + k, JSON.stringify(v)); } catch (e) {} }
+    function load(k, d) {
+        try { const v = localStorage.getItem('k12echem_' + k); if (v !== null) return JSON.parse(v); } catch (e) {}
+        return memStore[k] !== undefined ? memStore[k] : d;
+    }
+    function fb(ok, title, text) {
+        return `<div class="p-4 rounded-xl text-left reveal-anim ${ok ? 'bg-light text-[#2f6137] border border-[#dfeae3]' : 'bg-red-50 text-red-900 border border-red-200'}">
+            <p class="font-bold mb-1 flex items-center gap-2">${ok ? '<i data-lucide="check-circle" class="w-5 h-5"></i>' : '<i data-lucide="x-circle" class="w-5 h-5"></i>'}${title}</p>
+            <p class="text-sm">${text}</p></div>`;
+    }
+    const fmtV = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2).replace('.', ',') + ' V';
+    const fmtNum = v => (v < 0 ? '−' : '') + Math.abs(v).toFixed(2).replace('.', ',');
+
+    // ================== SPANNUNGSREIHE (Buchtabelle S. 222) ==================
+    // E⁰-Werte exakt nach der Tabelle im Buchanhang; Ni ist dort nicht enthalten
+    // und deshalb als Ergänzung gekennzeichnet (wird im Fahrplan verwendet).
+    const SR = [
+        { red: 'Li', ox: 'Li⁺ + e⁻', E: -3.02, metal: true, sym: 'Li', ion: 'Li⁺', z: 1 },
+        { red: 'Na', ox: 'Na⁺ + e⁻', E: -2.71, metal: true, sym: 'Na', ion: 'Na⁺', z: 1 },
+        { red: 'Al', ox: 'Al³⁺ + 3 e⁻', E: -1.66, metal: true, sym: 'Al', ion: 'Al³⁺', z: 3 },
+        { red: 'Zn', ox: 'Zn²⁺ + 2 e⁻', E: -0.76, metal: true, sym: 'Zn', ion: 'Zn²⁺', z: 2 },
+        { red: 'Fe', ox: 'Fe²⁺ + 2 e⁻', E: -0.41, metal: true, sym: 'Fe', ion: 'Fe²⁺', z: 2 },
+        { red: 'Ni', ox: 'Ni²⁺ + 2 e⁻', E: -0.25, metal: true, sym: 'Ni', ion: 'Ni²⁺', z: 2, extra: true },
+        { red: 'Pb', ox: 'Pb²⁺ + 2 e⁻', E: -0.13, metal: true, sym: 'Pb', ion: 'Pb²⁺', z: 2 },
+        { red: 'H₂ + 2 H₂O', ox: '2 H₃O⁺ + 2 e⁻', E: 0.00, ref: true },
+        { red: 'Cu', ox: 'Cu²⁺ + 2 e⁻', E: 0.34, metal: true, sym: 'Cu', ion: 'Cu²⁺', z: 2 },
+        { red: '4 OH⁻', ox: 'O₂ + 2 H₂O + 4 e⁻', E: 0.40 },
+        { red: '2 I⁻', ox: 'I₂ + 2 e⁻', E: 0.54, sym: 'I₂', ion: 'I⁻', z: 2, halogen: true },
+        { red: 'Fe²⁺', ox: 'Fe³⁺ + e⁻', E: 0.77 },
+        { red: 'Ag', ox: 'Ag⁺ + e⁻', E: 0.80, metal: true, sym: 'Ag', ion: 'Ag⁺', z: 1 },
+        { red: '2 Br⁻', ox: 'Br₂ + 2 e⁻', E: 1.07, sym: 'Br₂', ion: 'Br⁻', z: 2, halogen: true },
+        { red: '2 Cl⁻', ox: 'Cl₂ + 2 e⁻', E: 1.36, sym: 'Cl₂', ion: 'Cl⁻', z: 2, halogen: true },
+        { red: 'Au', ox: 'Au³⁺ + 3 e⁻', E: 1.42, metal: true, sym: 'Au', ion: 'Au³⁺', z: 3 },
+        { red: 'Mn²⁺ + 12 H₂O', ox: 'MnO₄⁻ + 8 H₃O⁺ + 5 e⁻', E: 1.49 },
+        { red: '2 F⁻', ox: 'F₂ + 2 e⁻', E: 2.87 }
+    ];
+    let srSel = [];
+    function renderSpannungsreihe() {
+        document.getElementById('spannungsreiheTable').innerHTML = `
+            <div class="flex gap-2 mb-3 text-[11px]">
+                <div class="flex-1 bg-red-50 border border-red-200 rounded-lg p-2 text-center text-red-800 font-bold">oben: starke Reduktionsmittel · unedel</div>
+                <div class="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-2 text-center text-blue-800 font-bold">unten: starke Oxidationsmittel · edel</div>
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+                <table class="w-full text-left border-collapse text-sm min-w-[420px]">
+                    <thead><tr class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
+                        <th class="p-2.5 font-bold">Red</th><th class="p-2.5 font-bold text-center">⇌</th>
+                        <th class="p-2.5 font-bold">Ox + z e⁻</th><th class="p-2.5 font-bold text-right">E⁰ in V</th>
+                    </tr></thead>
+                    <tbody>${SR.map((r, i) => `
+                        <tr class="sr-row border-b border-gray-100 cursor-pointer ${i % 2 ? 'bg-gray-50/60' : ''}" id="srRow${i}" onclick="srClick(${i})">
+                            <td class="p-2.5 formula font-bold">${r.red}</td>
+                            <td class="p-2.5 text-center text-gray-400">⇌</td>
+                            <td class="p-2.5 formula">${r.ox}</td>
+                            <td class="p-2.5 text-right formula font-bold ${r.E < 0 ? 'text-red-600' : r.E > 0 ? 'text-blue-600' : 'text-gray-700'}">${fmtNum(r.E)}${r.extra ? '<span class="text-[10px] text-amber-600 ml-1">*</span>' : ''}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-[11px] text-gray-500 mt-2">* Nickel steht nicht im Buchanhang, wird im Unterricht aber verwendet (E⁰ = −0,25 V).</p>
+            <div id="srInfo" class="mt-3"></div>`;
+    }
+    function srClick(i) {
+        const r = SR[i];
+        document.getElementById('srInfo').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 pop-anim">
+                <p class="formula font-bold text-gray-800 mb-1">${r.red} ⇌ ${r.ox}</p>
+                <p class="text-sm text-gray-700">Standardpotenzial <strong class="formula">E⁰ = ${fmtV(r.E)}</strong>${r.ref ? ' — das ist der festgelegte Nullpunkt der Skala.' : ''}</p>
+                <p class="text-sm text-gray-600 mt-1">${r.E < 0
+                    ? `<strong class="text-red-700">${r.red}</strong> ist ein vergleichsweise <strong>starkes Reduktionsmittel</strong>${r.metal ? ' — ein unedles Metall' : ''}. Es gibt Elektronen an alle Paare ab, die weiter unten stehen.`
+                    : r.E > 0
+                    ? `<strong class="text-blue-700">${r.ox.split(' +')[0]}</strong> ist ein vergleichsweise <strong>starkes Oxidationsmittel</strong>${r.metal ? ' — ein edles Metall' : ''}. Es nimmt Elektronen von allen Paaren auf, die weiter oben stehen.`
+                    : 'Alle anderen Potenziale sind auf diesen Wert bezogen.'}</p>
+            </div>`;
+    }
+
+    // ================== SHE-DIAGRAMM ==================
+    function renderSHE() {
+        document.getElementById('sheDiagram').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                <svg viewBox="0 0 480 210" class="w-full h-auto max-w-lg mx-auto">
+                    <rect x="20" y="70" width="180" height="110" rx="6" fill="#e0f2fe" stroke="#7dd3fc"/>
+                    <rect x="280" y="70" width="180" height="110" rx="6" fill="#dcfce7" stroke="#86efac"/>
+                    <rect x="200" y="70" width="80" height="110" fill="#f1f5f9" stroke="#cbd5e1" stroke-dasharray="3 3"/>
+                    <text x="240" y="130" font-size="9" fill="#64748b" text-anchor="middle" transform="rotate(-90 240 130)">Diaphragma</text>
+                    <rect x="95" y="40" width="14" height="120" rx="2" fill="#94a3b8"/>
+                    <circle cx="102" cy="150" r="4" fill="#e2e8f0"/><circle cx="92" cy="160" r="3.5" fill="#e2e8f0"/><circle cx="112" cy="162" r="3" fill="#e2e8f0"/>
+                    <path d="M 60 120 L 60 95 L 95 95" fill="none" stroke="#475569" stroke-width="2"/>
+                    <text x="48" y="128" font-size="9" fill="#475569" text-anchor="middle">H₂</text>
+                    <text x="102" y="35" font-size="9" fill="#475569" text-anchor="middle">Pt (platiniert)</text>
+                    <text x="110" y="196" font-size="9" fill="#0369a1" text-anchor="middle">c(H₃O⁺) = 1 mol/l</text>
+                    <rect x="365" y="55" width="14" height="105" rx="2" fill="#d97706"/>
+                    <text x="372" y="48" font-size="9" fill="#475569" text-anchor="middle">Metall</text>
+                    <text x="372" y="196" font-size="9" fill="#166534" text-anchor="middle">c(Mᶻ⁺) = 1 mol/l</text>
+                    <path d="M 102 40 L 102 22 L 372 22 L 372 55" fill="none" stroke="#1f2937" stroke-width="2"/>
+                    <circle cx="237" cy="22" r="15" fill="#fff" stroke="#1f2937" stroke-width="2"/>
+                    <text x="237" y="26" font-size="12" fill="#1f2937" font-weight="bold" text-anchor="middle">U</text>
+                    <text x="110" y="62" font-size="11" fill="#0369a1" font-weight="bold" text-anchor="middle">E⁰ = 0 V</text>
+                    <text x="372" y="62" font-size="11" fill="#166534" font-weight="bold" text-anchor="middle">E⁰ = ?</text>
+                </svg>
+                <p class="text-xs text-gray-500 text-center mt-2">Die gemessene Spannung <em>ist</em> das Standardpotenzial der rechten Halbzelle.</p>
+            </div>`;
+    }
+
+    // ================== DANIELL-SIMULATOR ==================
+    let daniellOn = false;
+    function renderDaniell() {
+        document.getElementById('daniellContainer').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5">
+                <div id="daniellSvg" class="bg-white rounded-xl border border-gray-200 p-2 mb-4"></div>
+                <div class="flex flex-wrap gap-3 justify-center mb-4">
+                    <button id="daniellBtn" onclick="toggleDaniell()" class="btn-tap bg-primary hover:bg-[#2f6137] text-white font-bold py-3 px-6 rounded-xl">Stromkreis schließen</button>
+                </div>
+                <div id="daniellInfo"></div>
+            </div>`;
+        drawDaniell();
+    }
+    function toggleDaniell() { daniellOn = !daniellOn; drawDaniell(); }
+    function drawDaniell() {
+        const on = daniellOn;
+        document.getElementById('daniellBtn').textContent = on ? 'Stromkreis öffnen' : 'Stromkreis schließen';
+        document.getElementById('daniellSvg').innerHTML = `
+            <svg viewBox="0 0 500 250" class="w-full h-auto">
+                <rect x="30" y="80" width="190" height="130" rx="6" fill="#eef2f7" stroke="#cbd5e1"/>
+                <rect x="280" y="80" width="190" height="130" rx="6" fill="#dbeafe" stroke="#93c5fd"/>
+                <rect x="220" y="80" width="60" height="130" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="4 3"/>
+                <text x="250" y="148" font-size="9" fill="#64748b" text-anchor="middle" transform="rotate(-90 250 148)">Diaphragma</text>
+                <rect x="112" y="45" width="18" height="140" rx="2" fill="#9ca3af"/>
+                <text x="121" y="38" font-size="12" fill="#374151" font-weight="bold" text-anchor="middle" class="formula">Zn</text>
+                <rect x="370" y="45" width="18" height="140" rx="2" fill="#d97706"/>
+                <text x="379" y="38" font-size="12" fill="#374151" font-weight="bold" text-anchor="middle" class="formula">Cu</text>
+                <path d="M 121 45 L 121 20 L 379 20 L 379 45" fill="none" stroke="#1f2937" stroke-width="2.5"/>
+                <circle cx="250" cy="20" r="16" fill="#fff" stroke="#1f2937" stroke-width="2.5"/>
+                <text x="250" y="25" font-size="13" font-weight="bold" text-anchor="middle" fill="#1f2937">M</text>
+                ${on ? `
+                <g class="electron">
+                    <circle cx="180" cy="20" r="7" fill="#facc15" stroke="#ca8a04"/><text x="180" y="24" font-size="7" text-anchor="middle" fill="#78350f" font-weight="bold">e⁻</text>
+                    <circle cx="320" cy="20" r="7" fill="#facc15" stroke="#ca8a04"/><text x="320" y="24" font-size="7" text-anchor="middle" fill="#78350f" font-weight="bold">e⁻</text>
+                </g>
+                <text x="250" y="52" font-size="10" fill="#b45309" text-anchor="middle" font-weight="bold">Elektronen fließen →</text>
+                <circle cx="150" cy="120" r="9" fill="#9ca3af" opacity="0.85"/><text x="150" y="124" font-size="8" fill="#fff" text-anchor="middle" font-weight="bold">Zn²⁺</text>
+                <circle cx="160" cy="165" r="9" fill="#9ca3af" opacity="0.6"/><text x="160" y="169" font-size="8" fill="#fff" text-anchor="middle" font-weight="bold">Zn²⁺</text>
+                <circle cx="352" cy="135" r="9" fill="#d97706" opacity="0.5"/><text x="352" y="139" font-size="8" fill="#fff" text-anchor="middle" font-weight="bold">Cu</text>
+                <path d="M 300 195 L 210 195" stroke="#16a34a" stroke-width="1.5" marker-end="url(#ar)"/>
+                <text x="255" y="208" font-size="8.5" fill="#15803d" text-anchor="middle">SO₄²⁻ wandert zur Anode</text>
+                <defs><marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#16a34a"/></marker></defs>
+                ` : ''}
+                <text x="121" y="200" font-size="10" fill="#dc2626" text-anchor="middle" font-weight="bold">${on ? 'Anode · Minuspol' : 'Zinkhalbzelle'}</text>
+                <text x="379" y="200" font-size="10" fill="#1d4ed8" text-anchor="middle" font-weight="bold">${on ? 'Kathode · Pluspol' : 'Kupferhalbzelle'}</text>
+                <text x="125" y="228" font-size="9" fill="#64748b" text-anchor="middle">ZnSO₄-Lösung</text>
+                <text x="375" y="228" font-size="9" fill="#64748b" text-anchor="middle">CuSO₄-Lösung</text>
+            </svg>`;
+        document.getElementById('daniellInfo').innerHTML = on ? `
+            <div class="grid md:grid-cols-2 gap-3 pop-anim">
+                <div class="bg-red-50 border border-red-200 rounded-xl p-3">
+                    <p class="text-[11px] font-bold text-red-700 uppercase mb-1">Anode · Minuspol · Oxidation</p>
+                    <p class="formula font-bold text-red-900 text-sm">Zn → Zn²⁺ + 2 e⁻</p>
+                    <p class="text-xs text-red-900 mt-1">Das Zinkblech löst sich auf, die Zn²⁺-Konzentration steigt.</p>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                    <p class="text-[11px] font-bold text-blue-700 uppercase mb-1">Kathode · Pluspol · Reduktion</p>
+                    <p class="formula font-bold text-blue-900 text-sm">Cu²⁺ + 2 e⁻ → Cu</p>
+                    <p class="text-xs text-blue-900 mt-1">Kupfer scheidet sich ab, die Blaufärbung wird schwächer.</p>
+                </div>
+                <div class="md:col-span-2 bg-light border border-[#dfeae3] rounded-xl p-3 text-center">
+                    <p class="formula font-bold text-[#2f6137]">Zn + Cu²⁺ → Zn²⁺ + Cu &nbsp;·&nbsp; U⁰ = 1,10 V</p>
+                    <p class="text-xs text-[#2f6137] mt-1">Zum Ladungsausgleich wandern Sulfat-Ionen durch das Diaphragma zur Anode, Zink-Ionen zur Kathode. Ohne diesen Ausgleich käme der Stromfluss sofort zum Erliegen.</p>
+                </div>
+            </div>` : `<p class="text-sm text-gray-500 text-center">Noch fließt nichts: Ohne geschlossenen Stromkreis gibt es keinen Weg für die Elektronen.</p>`;
+        lucide.createIcons();
+    }
+
+    // ================== ZELLNOTATIONS-QUIZ ==================
+    const NOTATION_Q = [
+        { q: 'Welche Zellnotation gehört zum Daniell-Element?', opts: ['Zn | Zn²⁺ ‖ Cu²⁺ | Cu', 'Cu | Cu²⁺ ‖ Zn²⁺ | Zn', 'Zn²⁺ | Zn ‖ Cu | Cu²⁺', 'Zn | Cu²⁺ ‖ Zn²⁺ | Cu'], a: 0,
+          e: 'Links steht immer die Anode mit ihrer Lösung, rechts die Kathodenlösung mit der Kathode. Zink ist unedler, also Anode.' },
+        { q: 'Ein Element aus Eisen und Silber. Wie lautet die Notation?', opts: ['Ag | Ag⁺ ‖ Fe²⁺ | Fe', 'Fe | Fe²⁺ ‖ Ag⁺ | Ag', 'Fe | Ag⁺ ‖ Fe²⁺ | Ag', 'Fe²⁺ | Fe ‖ Ag | Ag⁺'], a: 1,
+          e: 'E⁰(Fe) = −0,41 V ist kleiner als E⁰(Ag) = +0,80 V. Eisen wird damit Anode und steht links.' },
+        { q: 'Wofür steht der Doppelstrich ‖?', opts: ['Für die Phasengrenze zwischen Metall und Lösung', 'Für das Diaphragma bzw. die Salzbrücke', 'Für den Leitungsdraht', 'Für den Pluspol'], a: 1,
+          e: 'Der Doppelstrich kennzeichnet die Trennung der beiden Halbzellen, der einfache Strich eine Phasengrenze.' }
+    ];
+    let notIdx = 0;
+    function renderNotationQuiz() { notIdx = 0; showNotation(); }
+    function showNotation() {
+        const it = NOTATION_Q[notIdx % NOTATION_Q.length];
+        document.getElementById('notationQuizArea').innerHTML = `
+            <div class="bg-light border border-[#dfeae3] rounded-2xl p-4 md:p-5">
+                <p class="font-bold text-[#2f6137] text-sm mb-3 flex items-center gap-2"><i data-lucide="target" class="w-4 h-4"></i> ${it.q}</p>
+                <div class="grid gap-2">${it.opts.map((o, i) => `<button onclick="checkNotation(${i})" class="btn-tap bg-white hover:bg-gray-50 border-2 border-gray-200 rounded-xl p-2.5 text-left formula text-sm">${o}</button>`).join('')}</div>
+                <div id="notFb" class="mt-3"></div>
+            </div>`;
+        lucide.createIcons();
+    }
+    function checkNotation(i) {
+        const it = NOTATION_Q[notIdx % NOTATION_Q.length];
+        document.getElementById('notFb').innerHTML = fb(i === it.a, i === it.a ? 'Richtig!' : 'Leider falsch.', it.e) +
+            `<button onclick="notIdx++; showNotation();" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-2.5 rounded-xl text-sm">Nächste Frage</button>`;
+        lucide.createIcons();
+    }
+
+    // ================== REAKTIONS-ORAKEL ==================
+    const ORAKEL = [
+        { a: 'Zn', b: 'Cu²⁺', txt: 'Ein Zinkblech taucht in eine Kupfer(II)-sulfat-Lösung.', react: true,
+          eq: 'Zn + Cu²⁺ → Zn²⁺ + Cu', e: 'Zn steht mit −0,76 V über Cu mit +0,34 V. Die Elektronen gehen bergab, die Reaktion läuft ab.' },
+        { a: 'Cu', b: 'Zn²⁺', txt: 'Ein Kupferblech taucht in eine Zinksulfat-Lösung.', react: false,
+          e: 'Kupfer steht mit +0,34 V unter Zink. Elektronen müssten bergauf fließen — das geschieht nicht freiwillig.' },
+        { a: 'Fe', b: 'Cu²⁺', txt: 'Ein Eisennagel liegt in einer Kupfer(II)-sulfat-Lösung.', react: true,
+          eq: 'Fe + Cu²⁺ → Fe²⁺ + Cu', e: 'Fe (−0,41 V) steht über Cu (+0,34 V): bergab, also läuft die Reaktion ab.' },
+        { a: 'Ag', b: 'H₃O⁺', txt: 'Silber wird in Salzsäure gelegt.', react: false,
+          e: 'Silber steht mit +0,80 V unter dem Wasserstoff-Paar (0 V). Edelmetalle lösen sich deshalb nicht in Säure.' },
+        { a: 'Zn', b: 'H₃O⁺', txt: 'Zink wird in Salzsäure gelegt.', react: true,
+          eq: 'Zn + 2 H₃O⁺ → Zn²⁺ + H₂ + 2 H₂O', e: 'Zink steht mit −0,76 V über dem Wasserstoff-Paar. Unedle Metalle lösen sich in Säure unter Wasserstoffentwicklung.' },
+        { a: 'Fe²⁺', b: 'I₂', txt: 'Zu einer Eisen(II)-Lösung wird Iod gegeben.', react: false,
+          e: 'Das Paar Fe²⁺/Fe³⁺ steht mit +0,77 V unter I⁻/I₂ mit +0,54 V. Iod kann Fe²⁺ nicht oxidieren.' },
+        { a: 'Fe²⁺', b: 'Br₂', txt: 'Zu einer Eisen(II)-Lösung wird Bromwasser gegeben.', react: true,
+          eq: '2 Fe²⁺ + Br₂ → 2 Fe³⁺ + 2 Br⁻', e: 'Br⁻/Br₂ steht mit +1,07 V unter Fe²⁺/Fe³⁺ (+0,77 V). Brom oxidiert Fe²⁺ zu Fe³⁺.' },
+        { a: 'Cu', b: 'Ag⁺', txt: 'Ein Kupferblech taucht in eine Silbernitrat-Lösung.', react: true,
+          eq: 'Cu + 2 Ag⁺ → Cu²⁺ + 2 Ag', e: 'Cu (+0,34 V) steht über Ag (+0,80 V). Beachte den Faktor 2, weil Ag⁺ nur ein Elektron aufnimmt.' }
+    ];
+    let orShuffled = [], orIdx = 0;
+    function renderOrakel() { orShuffled = [...ORAKEL].sort(() => Math.random() - .5); orIdx = 0; showOrakel(); }
+    function showOrakel() {
+        const it = orShuffled[orIdx % orShuffled.length];
+        document.getElementById('orakelContainer').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5">
+                <p class="text-gray-800 mb-4">${it.txt}</p>
+                <p class="text-sm text-gray-600 mb-3">Läuft unter Standardbedingungen freiwillig eine Reaktion ab?</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="checkOrakel(true)" class="btn-tap bg-light hover:brightness-95 text-[#2f6137] font-bold py-3 rounded-xl border-2 border-[#dfeae3]">Ja, läuft ab</button>
+                    <button onclick="checkOrakel(false)" class="btn-tap bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl border-2 border-gray-300">Nein</button>
+                </div>
+                <div id="orFb" class="mt-4"></div>
+            </div>`;
+    }
+    function checkOrakel(guess) {
+        const it = orShuffled[orIdx % orShuffled.length], ok = guess === it.react;
+        document.getElementById('orFb').innerHTML = fb(ok, ok ? 'Richtig!' : 'Leider falsch.', it.e) +
+            (it.react ? `<p class="formula font-bold text-center mt-3 bg-white p-3 rounded-xl border-2 border-primary text-primary text-sm">${it.eq}</p>` : '') +
+            `<button onclick="orIdx++; showOrakel();" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Nächster Fall</button>`;
+        lucide.createIcons();
+    }
+    // ================== ZELLBAUKASTEN ==================
+    const HZ = SR.filter(r => r.sym && (r.metal || r.halogen));
+    const ggt = (a, b) => b ? ggt(b, a % b) : a;
+    const kgv = (a, b) => a * b / ggt(a, b);
+    const co = n => n === 1 ? '' : n + ' ';
+    let bkA = 3, bkB = 8, bkStep = 0, bkDone = {};   // Start: Zn gegen Cu
+
+    function bkCell() {
+        const A = HZ[bkA], B = HZ[bkB];
+        const anode = A.E < B.E ? A : B, kathode = A.E < B.E ? B : A;
+        const n = kgv(anode.z, kathode.z);
+        const fa = n / anode.z, fk = n / kathode.z;
+        // Oxidation: Red → Ox + z e⁻   (bei Halogeniden ist die reduzierte Form das Ion)
+        const oxLeft = anode.halogen ? `${co(fa * anode.z)}${anode.ion}` : `${co(fa)}${anode.sym}`;
+        const oxRight = anode.halogen ? `${co(fa)}${anode.sym}` : `${co(fa)}${anode.ion}`;
+        const ox = `${oxLeft} → ${oxRight} + ${n} e⁻`;
+        const redLeft = kathode.halogen ? `${co(fk)}${kathode.sym}` : `${co(fk)}${kathode.ion}`;
+        const redRight = kathode.halogen ? `${co(fk * kathode.z)}${kathode.ion}` : `${co(fk)}${kathode.sym}`;
+        const red = `${redLeft} + ${n} e⁻ → ${redRight}`;
+        const ges = `${oxLeft} + ${redLeft} → ${oxRight} + ${redRight}`;
+        const dE = +(kathode.E - anode.E).toFixed(2);
+        // Nichtmetall-Halbzellen brauchen eine Ableitelektrode aus Platin (Buch S. 222)
+        const leftPart = anode.halogen ? `Pt | ${anode.ion}, ${anode.sym}` : `${anode.sym} | ${anode.ion}`;
+        const rightPart = kathode.halogen ? `${kathode.sym}, ${kathode.ion} | Pt` : `${kathode.ion} | ${kathode.sym}`;
+        const notation = `${leftPart} ‖ ${rightPart}`;
+        const needsPt = anode.halogen || kathode.halogen;
+        return { A, B, anode, kathode, n, ox, red, ges, dE, notation, needsPt };
+    }
+    function renderBaukasten() {
+        document.getElementById('baukastenContainer').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5">
+                <div class="grid sm:grid-cols-2 gap-3 mb-4">
+                    <div><label class="block text-xs font-bold text-gray-600 mb-1">Halbzelle 1</label>
+                        <select id="bkSelA" onchange="bkChange()" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary">
+                            ${HZ.map((h, i) => `<option value="${i}">${h.sym} / ${h.ion} (${fmtV(h.E)})</option>`).join('')}
+                        </select></div>
+                    <div><label class="block text-xs font-bold text-gray-600 mb-1">Halbzelle 2</label>
+                        <select id="bkSelB" onchange="bkChange()" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary">
+                            ${HZ.map((h, i) => `<option value="${i}">${h.sym} / ${h.ion} (${fmtV(h.E)})</option>`).join('')}
+                        </select></div>
+                </div>
+                <div class="flex gap-1.5 mb-4">${[0,1,2,3,4].map(i => `<div id="bkBar${i}" class="h-2 flex-1 rounded-full bg-gray-200 transition-colors duration-500"></div>`).join('')}</div>
+                <div id="bkBody"></div>
+            </div>`;
+        document.getElementById('bkSelA').value = bkA;
+        document.getElementById('bkSelB').value = bkB;
+        bkRender();
+    }
+    function bkChange() {
+        const a = +document.getElementById('bkSelA').value, b = +document.getElementById('bkSelB').value;
+        if (a === b) { document.getElementById('bkSelB').value = bkB; return; }
+        bkA = a; bkB = b; bkStep = 0; bkDone = {}; bkRender();
+    }
+    function bkNewRandom() {
+        do { bkA = Math.floor(Math.random() * HZ.length); bkB = Math.floor(Math.random() * HZ.length); } while (bkA === bkB);
+        bkStep = 0; bkDone = {};
+        document.getElementById('bkSelA').value = bkA; document.getElementById('bkSelB').value = bkB;
+        bkRender();
+    }
+    function shuffleOpts(correct, wrongs) {
+        const all = [{ t: correct, ok: true }, ...wrongs.map(w => ({ t: w, ok: false }))];
+        return all.sort(() => Math.random() - .5);
+    }
+    function bkRender() {
+        const c = bkCell();
+        for (let i = 0; i < 5; i++) document.getElementById('bkBar' + i).className =
+            'h-2 flex-1 rounded-full transition-colors duration-500 ' + (bkStep > i ? 'bg-primary' : 'bg-gray-200');
+        let h = '';
+        // Schritt 1 – Pole
+        h += bkBlock(1, 'Welche Halbzelle ist die Anode?', bkStep > 0, () => `
+            <div class="grid md:grid-cols-2 gap-3">
+                <div class="bg-red-50 border border-red-200 p-3 rounded-xl"><p class="text-[11px] font-bold text-red-700 uppercase mb-1">Anode · Minuspol · Oxidation</p>
+                    <p class="formula font-bold text-red-900">${c.anode.sym} / ${c.anode.ion} &nbsp;<span class="text-xs">${fmtV(c.anode.E)}</span></p></div>
+                <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl"><p class="text-[11px] font-bold text-blue-700 uppercase mb-1">Kathode · Pluspol · Reduktion</p>
+                    <p class="formula font-bold text-blue-900">${c.kathode.sym} / ${c.kathode.ion} &nbsp;<span class="text-xs">${fmtV(c.kathode.E)}</span></p></div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Das kleinere Potenzial wird Anode: ${fmtV(c.anode.E)} &lt; ${fmtV(c.kathode.E)}.</p>`);
+        if (bkStep === 0) {
+            h += `<div class="grid grid-cols-2 gap-3 mt-2">
+                <button onclick="bkAnswer(0, ${c.anode === c.A})" class="btn-tap bg-white hover:bg-gray-50 border-2 border-gray-200 rounded-xl p-3 font-bold formula">${c.A.sym} / ${c.A.ion}</button>
+                <button onclick="bkAnswer(0, ${c.anode === c.B})" class="btn-tap bg-white hover:bg-gray-50 border-2 border-gray-200 rounded-xl p-3 font-bold formula">${c.B.sym} / ${c.B.ion}</button>
+            </div><div id="bkFb" class="mt-3"></div>`;
+        }
+        // Schritt 2 – Oxidation
+        if (bkStep >= 1) {
+            h += bkBlock(2, 'Teilgleichung der Oxidation', bkStep > 1, () =>
+                `<p class="formula font-bold text-red-900 bg-red-50 border border-red-200 rounded-xl p-3 text-center text-sm">${c.ox}</p>`);
+            if (bkStep === 1) h += bkChoice(1, c.ox, bkWrongOx(c));
+        }
+        // Schritt 3 – Reduktion
+        if (bkStep >= 2) {
+            h += bkBlock(3, 'Teilgleichung der Reduktion', bkStep > 2, () =>
+                `<p class="formula font-bold text-blue-900 bg-blue-50 border border-blue-200 rounded-xl p-3 text-center text-sm">${c.red}</p>`);
+            if (bkStep === 2) h += bkChoice(2, c.red, bkWrongRed(c));
+        }
+        // Schritt 4 – Gesamtgleichung
+        if (bkStep >= 3) {
+            h += bkBlock(4, 'Gesamtgleichung', bkStep > 3, () =>
+                `<p class="formula font-bold text-gray-800 bg-white border border-gray-200 rounded-xl p-3 text-center text-sm">${c.ges}</p>
+                 <p class="text-xs text-gray-500 mt-2">kgV der Elektronenzahlen: ${c.anode.z} und ${c.kathode.z} → <strong>${c.n} e⁻</strong>.</p>`);
+            if (bkStep === 3) h += bkChoice(3, c.ges, bkWrongGes(c));
+        }
+        // Schritt 5 – ΔE⁰ + Notation
+        if (bkStep >= 4) {
+            h += bkBlock(5, 'Zellspannung und Zellnotation', bkStep > 4, () => `
+                <p class="formula text-sm text-gray-700 mb-1">ΔE⁰ = ${fmtNum(c.kathode.E)} V − (${fmtNum(c.anode.E)} V)</p>
+                <p class="formula font-bold text-center bg-light border-2 border-primary rounded-xl p-3 text-primary">ΔE⁰ = ${fmtNum(c.dE)} V</p>
+                <p class="formula font-bold text-center bg-white border border-gray-200 rounded-xl p-3 mt-2 text-sm">${c.notation}</p>
+                ${c.needsPt ? `<p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2"><strong>Ableitelektrode:</strong> Bei einer Nichtmetall-Halbzelle ist die reduzierte Form kein Metall. Man braucht deshalb eine inerte Elektrode aus Platin, an der die Elektronen zu- bzw. abgeleitet werden.</p>` : ''}`);
+            if (bkStep === 4) h += `
+                <p class="text-sm text-gray-600 mb-2">Berechne ΔE⁰ und gib den Wert in Volt ein:</p>
+                <div class="flex gap-2 max-w-xs">
+                    <input id="bkInput" type="text" autocomplete="off" placeholder="z. B. 1,10" onkeydown="if(event.key==='Enter')bkCheckE()"
+                        class="num-input flex-1 min-w-0 bg-white border-2 border-gray-300 rounded-xl p-3 font-bold">
+                    <button onclick="bkCheckE()" class="btn-tap flex-shrink-0 bg-primary hover:bg-[#2f6137] text-white font-bold px-5 rounded-xl">Prüfen</button>
+                </div><div id="bkFb" class="mt-3"></div>`;
+        }
+        if (bkStep >= 5) h += `<button onclick="bkNewRandom()" class="btn-tap w-full mt-3 bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Neue Kombination</button>`;
+        document.getElementById('bkBody').innerHTML = h;
+        lucide.createIcons();
+    }
+    function bkBlock(n, title, done, inner) {
+        return `<div class="mb-3 reveal-anim">
+            <div class="flex items-start gap-2.5 mb-2">
+                <span class="flex-shrink-0 w-6 h-6 rounded-full ${done ? 'bg-primary' : 'bg-gray-400'} text-white text-xs font-bold flex items-center justify-center mt-0.5">${n}</span>
+                <h4 class="font-bold text-gray-700 text-sm">${title}</h4></div>
+            ${done ? `<div style="margin-left:2.1rem">${inner()}</div>` : ''}</div>`;
+    }
+    function bkChoice(step, correct, wrongs) {
+        const opts = shuffleOpts(correct, wrongs);
+        return `<div class="grid gap-2" style="margin-left:2.1rem">
+            ${opts.map(o => `<button onclick="bkAnswer(${step}, ${o.ok})" class="btn-tap bg-white hover:bg-gray-50 border-2 border-gray-200 rounded-xl p-2.5 text-left formula text-sm">${o.t}</button>`).join('')}
+        </div><div id="bkFb" class="mt-3" style="margin-left:2.1rem"></div>`;
+    }
+    function bkWrongOx(c) {
+        const a = c.anode, fa = c.n / a.z;
+        return [
+            `${co(fa)}${a.halogen ? a.sym : a.ion} → ${co(fa)}${a.halogen ? a.ion : a.sym} + ${c.n} e⁻`,  // Richtung vertauscht
+            `${co(fa)}${a.halogen ? a.ion : a.sym} + ${c.n} e⁻ → ${co(fa)}${a.halogen ? a.sym : a.ion}`,  // Elektronen links
+            `${co(fa)}${a.halogen ? a.ion : a.sym} → ${co(fa)}${a.halogen ? a.sym : a.ion} + ${a.z} e⁻`   // ohne Faktor
+        ].filter((v, i, arr) => arr.indexOf(v) === i && v !== c.ox).slice(0, 3);
+    }
+    function bkWrongRed(c) {
+        const k = c.kathode, fk = c.n / k.z;
+        return [
+            `${co(fk)}${k.halogen ? k.ion : k.sym} → ${co(fk)}${k.halogen ? k.sym : k.ion} + ${c.n} e⁻`,
+            `${co(fk)}${k.halogen ? k.sym : k.ion} → ${co(fk)}${k.halogen ? k.ion : k.sym} + ${c.n} e⁻`,
+            `${co(fk)}${k.halogen ? k.sym : k.ion} + ${k.z} e⁻ → ${co(fk)}${k.halogen ? k.ion : k.sym}`
+        ].filter((v, i, arr) => arr.indexOf(v) === i && v !== c.red).slice(0, 3);
+    }
+    function bkWrongGes(c) {
+        const a = c.anode, k = c.kathode;
+        const aL = a.halogen ? `${co(c.n)}${a.ion}` : `${a.sym}`, aR = a.halogen ? `${a.sym}` : `${a.ion}`;
+        const kL = k.halogen ? `${k.sym}` : `${k.ion}`, kR = k.halogen ? `${co(c.n)}${k.ion}` : `${k.sym}`;
+        return [
+            `${aL} + ${kL} → ${aR} + ${kR}`,                                   // ohne Faktoren
+            `${aR} + ${kR} → ${aL} + ${kL}`,                                   // Richtung vertauscht
+            `${c.ges} + ${c.n} e⁻`                                             // Elektronen stehen geblieben
+        ].filter((v, i, arr) => arr.indexOf(v) === i && v !== c.ges).slice(0, 3);
+    }
+    function bkAnswer(step, ok) {
+        const c = bkCell();
+        const expl = [
+            `Die Halbzelle mit dem <strong>kleineren</strong> Standardpotenzial wird zur Anode: ${fmtV(c.anode.E)} &lt; ${fmtV(c.kathode.E)}.`,
+            `An der Anode wird oxidiert: Die reduzierte Form gibt Elektronen ab, die Elektronen stehen rechts.`,
+            `An der Kathode wird reduziert: Die oxidierte Form nimmt Elektronen auf, die Elektronen stehen links.`,
+            `Beide Teilgleichungen werden so multipliziert, dass sich die ${c.n} Elektronen wegkürzen.`
+        ][step];
+        document.getElementById('bkFb').innerHTML = fb(ok, ok ? 'Richtig!' : 'Nicht ganz.', expl) +
+            `<button onclick="bkStep=${step + 1}; bkRender();" class="btn-tap mt-3 w-full bg-primary hover:bg-[#2f6137] text-white font-bold py-2.5 rounded-xl text-sm">Weiter</button>`;
+        lucide.createIcons();
+    }
+    function bkCheckE() {
+        const c = bkCell();
+        const raw = document.getElementById('bkInput').value.trim().replace(',', '.').replace(/[Vv\s]/g, '');
+        const val = parseFloat(raw);
+        if (isNaN(val)) { document.getElementById('bkFb').innerHTML = `<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">Bitte eine Zahl eingeben, z. B. <span class="formula font-bold">1,10</span>.</div>`; return; }
+        const ok = Math.abs(val - c.dE) < 0.005;
+        const hint = (Math.abs(val + c.dE) < 0.005)
+            ? 'Du hast Kathode und Anode vertauscht — ΔE⁰ einer galvanischen Zelle ist immer <strong>positiv</strong>.'
+            : (Math.abs(Math.abs(c.kathode.E) - Math.abs(c.anode.E) - val) < 0.005)
+            ? 'Achte auf das Vorzeichen: Ein negatives Anodenpotenzial wird <strong>abgezogen</strong>, minus mal minus ergibt plus.'
+            : `ΔE⁰ = E⁰(Kathode) − E⁰(Anode) = ${fmtNum(c.kathode.E)} V − (${fmtNum(c.anode.E)} V) = <strong>${fmtNum(c.dE)} V</strong>.`;
+        document.getElementById('bkFb').innerHTML = fb(ok, ok ? `Richtig — ΔE⁰ = ${fmtNum(c.dE)} V` : `Nicht ganz. Richtig ist ΔE⁰ = ${fmtNum(c.dE)} V`, hint) +
+            `<button onclick="bkStep=5; bkRender();" class="btn-tap mt-3 w-full bg-primary hover:bg-[#2f6137] text-white font-bold py-2.5 rounded-xl text-sm">Lösung und Zellnotation anzeigen</button>`;
+        document.getElementById('bkInput').disabled = true;
+        lucide.createIcons();
+    }
+    // ================== BATTERIETYPEN ==================
+    const BATT = [
+        { n: 'Zink-Kohle-Batterie', u: '1,5 V', typ: 'Primärzelle', minus: 'Zinkbecher (Zn)', plus: 'Graphitstift im Braunstein-Ruß-Gemisch (MnO₂)',
+          elyt: 'Zinkchlorid mit etwas Ammoniumchlorid, zu einem Gel eingedickt',
+          ox: 'Zn → Zn²⁺ + 2 e⁻', red: 'MnO₂ + H₂O + e⁻ → MnO(OH) + OH⁻',
+          info: 'Geht auf das Leclanché-Element von 1866 zurück. Bei Stromfluss wird der Zinkbecher teilweise zerstört — die Batterie kann auslaufen und Geräte beschädigen. Heute meist durch Alkali-Mangan ersetzt.' },
+        { n: 'Alkali-Mangan-Batterie', u: '1,5 V', typ: 'Primärzelle', minus: 'Zinkpulver mit Kalilauge (Zinkgel)', plus: 'Braunstein-Graphit-Gemisch (MnO₂)',
+          elyt: 'Kalilauge (alkalisch)', ox: 'Zn → Zn²⁺ + 2 e⁻', red: 'MnO₂ + H₂O + e⁻ → MnO(OH) + OH⁻',
+          info: 'Liefert eine höhere Stromstärke als die Zink-Kohle-Batterie und ist auslaufsicher. Geeignet für Geräte mit hohem Strombedarf und Dauernutzung.' },
+        { n: 'Zink-Luft-Knopfzelle', u: '1,4 V', typ: 'Primärzelle', minus: 'Zinkpulver mit Kalilauge', plus: 'Aktivkohle mit Luftsauerstoff',
+          elyt: 'Kalilauge', ox: 'Zn → Zn²⁺ + 2 e⁻', red: 'O₂ + 2 H₂O + 4 e⁻ → 4 OH⁻',
+          info: 'Das Oxidationsmittel kommt aus der Luft und muss nicht mitgeführt werden — daher sehr kompakt. Typisch für Hörgeräte. Vor Gebrauch muss die Klebefolie über dem Luftloch entfernt werden.' },
+        { n: 'Silberoxid-Zink-Knopfzelle', u: '1,55 V', typ: 'Primärzelle', minus: 'Zink', plus: 'Silber(I)-oxid (Ag₂O)',
+          elyt: 'Kalilauge', ox: 'Zn → Zn²⁺ + 2 e⁻', red: 'Ag₂O + H₂O + 2 e⁻ → 2 Ag + 2 OH⁻',
+          info: 'Sehr langlebig (etwa 5 Jahre) und spannungsstabil. Wird in Uhren und Herzschrittmachern eingesetzt. Das enthaltene Silber kann bei fachgerechter Entsorgung zurückgewonnen werden.' },
+        { n: 'Lithium-Mangan-Batterie', u: '3,0 V', typ: 'Primärzelle', minus: 'Lithium', plus: 'Braunstein (MnO₂)',
+          elyt: 'Lithiumperchlorat in organischem Lösungsmittel (wasserfrei)', ox: 'Li → Li⁺ + e⁻', red: 'MnO₂ + Li⁺ + e⁻ → LiMnO₂',
+          info: 'Hohe Spannung und lange Lebensdauer. Der Elektrolyt ist wasserfrei, weil Lithium mit Wasser heftig reagieren würde. Einsatz in der Mikroelektronik, z. B. in Fotoapparaten.' }
+    ];
+    let battIdx = 0;
+    function renderBatterien() {
+        document.getElementById('batterieContainer').innerHTML = `
+            <div class="flex flex-wrap gap-2 mb-4">${BATT.map((b, i) => `<button id="battBtn${i}" onclick="setBatt(${i})" class="btn-tap px-3 py-1.5 rounded-full text-xs font-bold border-2 transition">${b.n.replace('-Batterie', '').replace('-Knopfzelle', '')}</button>`).join('')}</div>
+            <div id="battDetail"></div>`;
+        setBatt(0);
+    }
+    function setBatt(i) {
+        battIdx = i;
+        BATT.forEach((_, k) => { const b = document.getElementById('battBtn' + k); if (b) b.className = 'btn-tap px-3 py-1.5 rounded-full text-xs font-bold border-2 transition ' + (k === i ? 'bg-primary border-primary text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-primary'); });
+        const b = BATT[i];
+        document.getElementById('battDetail').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5 pop-anim">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div><h4 class="font-bold text-gray-800">${b.n}</h4><p class="text-xs text-gray-500">${b.typ}</p></div>
+                    <span class="formula font-bold text-primary bg-light px-3 py-1 rounded-full text-sm flex-shrink-0">${b.u}</span>
+                </div>
+                <div class="grid md:grid-cols-2 gap-3 mb-3">
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-3">
+                        <p class="text-[11px] font-bold text-red-700 uppercase mb-1">Minuspol · Anode · Oxidation</p>
+                        <p class="text-sm text-red-900 mb-1">${b.minus}</p>
+                        <p class="formula font-bold text-red-900 text-sm">${b.ox}</p>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                        <p class="text-[11px] font-bold text-blue-700 uppercase mb-1">Pluspol · Kathode · Reduktion</p>
+                        <p class="text-sm text-blue-900 mb-1">${b.plus}</p>
+                        <p class="formula font-bold text-blue-900 text-sm">${b.red}</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mb-2"><strong>Elektrolyt:</strong> ${b.elyt}</p>
+                <p class="text-sm text-gray-700">${b.info}</p>
+            </div>`;
+    }
+
+    // ================== MINI-QUIZ PRIMÄR/SEKUNDÄR ==================
+    const PS = [
+        { t: 'Alkali-Mangan-Batterie', a: 'prim', e: 'Primärzelle: Beim Entladen wird das Zink verbraucht, die Reaktionen lassen sich nicht sicher umkehren.' },
+        { t: 'Bleiakkumulator', a: 'sek', e: 'Sekundärzelle: Das Blei(II)-sulfat haftet an beiden Elektroden und kann beim Laden zurückverwandelt werden.' },
+        { t: 'Zink-Luft-Knopfzelle im Hörgerät', a: 'prim', e: 'Primärzelle: Das Zink wird verbraucht, und der Luftsauerstoff lässt sich nicht zurückführen.' },
+        { t: 'Lithium-Ionen-Akku im Smartphone', a: 'sek', e: 'Sekundärzelle: Die Lithium-Ionen wandern beim Laden einfach zurück ins Graphitgitter.' },
+        { t: 'Nickel-Metallhydrid-Zelle', a: 'sek', e: 'Sekundärzelle: Der Wasserstoff wird in einer Metalllegierung gespeichert und beim Laden wieder eingelagert.' },
+        { t: 'Zink-Kohle-Batterie', a: 'prim', e: 'Primärzelle: Der Zinkbecher wird beim Entladen teilweise zerstört — Laden wäre gefährlich.' },
+        { t: 'Silberoxid-Zink-Knopfzelle in einer Armbanduhr', a: 'prim', e: 'Primärzelle: Sie ist zwar sehr langlebig, aber nicht wiederaufladbar.' }
+    ];
+    let psShuffled = [], psIdx = 0;
+    function renderPrimSekQuiz() { psShuffled = [...PS].sort(() => Math.random() - .5); psIdx = 0; showPS(); }
+    function showPS() {
+        const it = psShuffled[psIdx % psShuffled.length];
+        document.getElementById('primSekQuizArea').innerHTML = `
+            <div class="bg-light border border-[#dfeae3] rounded-2xl p-4 md:p-5 text-center">
+                <div class="bg-white py-5 rounded-xl shadow-sm border border-gray-200 mb-4"><p class="font-bold text-gray-800">${it.t}</p></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="checkPS('prim')" class="btn-tap bg-white hover:bg-gray-50 text-gray-700 font-bold py-3 rounded-xl border-2 border-gray-300">Primärzelle</button>
+                    <button onclick="checkPS('sek')" class="btn-tap bg-white hover:bg-gray-50 text-primary font-bold py-3 rounded-xl border-2 border-primary">Sekundärzelle</button>
+                </div>
+                <div id="psFb" class="mt-4"></div>
+            </div>`;
+    }
+    function checkPS(a) {
+        const it = psShuffled[psIdx % psShuffled.length];
+        document.getElementById('psFb').innerHTML = fb(a === it.a, a === it.a ? 'Richtig!' : 'Leider falsch.', it.e) +
+            `<button onclick="psIdx++; showPS();" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Nächstes Beispiel</button>`;
+        lucide.createIcons();
+    }
+
+    // ================== AKKU-SIMULATOR ==================
+    const AKKU = {
+        blei: {
+            n: 'Bleiakkumulator', u: '2,05 V je Zelle', minusMat: 'Blei (Pb)', plusMat: 'Blei(IV)-oxid (PbO₂)', elyt: 'verdünnte Schwefelsäure',
+            entladen: {
+                minus: 'Pb + SO₄²⁻ → PbSO₄ + 2 e⁻', plus: 'PbO₂ + SO₄²⁻ + 4 H₃O⁺ + 2 e⁻ → PbSO₄ + 6 H₂O',
+                ges: 'Pb + PbO₂ + 2 H₂SO₄ → 2 PbSO₄ + 2 H₂O',
+                rollen: ['Minuspol = Anode (Oxidation)', 'Pluspol = Kathode (Reduktion)'],
+                hinweis: 'Schwefelsäure wird verbraucht, die Dichte der Elektrolytlösung sinkt. An beiden Elektroden scheidet sich schwer lösliches Blei(II)-sulfat ab.'
+            },
+            laden: {
+                minus: 'PbSO₄ + 2 e⁻ → Pb + SO₄²⁻', plus: 'PbSO₄ + 6 H₂O → PbO₂ + SO₄²⁻ + 4 H₃O⁺ + 2 e⁻',
+                ges: '2 PbSO₄ + 2 H₂O → Pb + PbO₂ + 2 H₂SO₄',
+                rollen: ['Minuspol = Kathode (Reduktion)', 'Pluspol = Anode (Oxidation)'],
+                hinweis: 'Durch die äußere Spannung werden die Reaktionen erzwungen. Schwefelsäure entsteht zurück, die Dichte steigt wieder.'
+            },
+            extra: 'Die Säuredichte zeigt den Ladezustand an: 1,28 g/cm³ entsprechen 100 %, 1,10 g/cm³ einem leeren Akku. Wird der Akku tiefentladen, bilden sich grobe, schlecht rückverwandelbare PbSO₄-Kristalle (Sulfatierung) — der Akku verliert dauerhaft Kapazität.'
+        },
+        lithium: {
+            n: 'Lithium-Ionen-Akkumulator', u: '3,3–3,8 V', minusMat: 'Graphit-Einlagerungselektrode', plusMat: 'Lithium-Metalloxid (z. B. LiCoO₂)', elyt: 'Lithiumsalz in organischem Lösungsmittel (wasserfrei)',
+            entladen: {
+                minus: 'C₆⁻ → 6 C + e⁻', plus: 'Co⁴⁺ + e⁻ → Co³⁺',
+                ges: 'Li⁺-Ionen wandern vom Minuspol zum Pluspol',
+                rollen: ['Minuspol = Anode (Oxidation)', 'Pluspol = Kathode (Reduktion)'],
+                hinweis: 'Die Lithium-Ionen wandern zum Ladungsausgleich zwischen den Polen. Ihre Oxidationszahl ändert sich dabei nicht — sie sind nicht an der Redoxreaktion beteiligt.'
+            },
+            laden: {
+                minus: '6 C + e⁻ → C₆⁻', plus: 'Co³⁺ → Co⁴⁺ + e⁻',
+                ges: 'Li⁺-Ionen wandern zurück ins Graphitgitter',
+                rollen: ['Minuspol = Kathode (Reduktion)', 'Pluspol = Anode (Oxidation)'],
+                hinweis: 'Beim Laden geben die Metall-Ionen am Pluspol Elektronen ab, das Graphitgitter am Minuspol nimmt sie auf.'
+            },
+            extra: 'Oft „Schaukelstuhl-Prinzip" genannt: Die Li⁺-Ionen pendeln zwischen zwei Wirtsgittern hin und her. Der Elektrolyt muss wasserfrei sein, weil Lithium mit Wasser heftig reagiert und die Zellspannung über der Zersetzungsspannung von Wasser liegt.'
+        },
+        nimh: {
+            n: 'Nickel-Metallhydrid-Akkumulator', u: '1,2 V', minusMat: 'wasserstoffspeichernde Metalllegierung', plusMat: 'Nickel(III)-hydroxid-oxid', elyt: 'Kalilauge',
+            entladen: {
+                minus: 'Metall-H → Metall + H⁺ + e⁻', plus: 'NiO(OH) + H⁺ + e⁻ → Ni(OH)₂',
+                ges: 'NiO(OH) + Metall-H → Ni(OH)₂ + Metall',
+                rollen: ['Minuspol = Anode (Oxidation)', 'Pluspol = Kathode (Reduktion)'],
+                hinweis: 'Der in der Legierung gespeicherte Wasserstoff wird abgegeben.'
+            },
+            laden: {
+                minus: 'Metall + H⁺ + e⁻ → Metall-H', plus: 'Ni(OH)₂ → NiO(OH) + H⁺ + e⁻',
+                ges: 'Ni(OH)₂ + Metall → NiO(OH) + Metall-H',
+                rollen: ['Minuspol = Kathode (Reduktion)', 'Pluspol = Anode (Oxidation)'],
+                hinweis: 'Der Wasserstoff wird wieder in der Metalllegierung eingelagert („Metallhydrid").'
+            },
+            extra: 'Findet sich in schnurlosen Telefonen, Spielzeug und Hybridautos. Spezifische Energie etwa 80 Wh/kg — doppelt so viel wie der Bleiakku, aber nur halb so viel wie Lithium-Ionen.'
+        }
+    };
+    let akkuTyp = 'blei', akkuMode = 'entladen';
+    function renderAkku() {
+        document.getElementById('akkuContainer').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5">
+                <div class="flex flex-wrap gap-2 mb-4">
+                    ${Object.entries(AKKU).map(([k, v]) => `<button id="akTyp${k}" onclick="setAkkuTyp('${k}')" class="btn-tap px-3 py-1.5 rounded-full text-xs font-bold border-2 transition">${v.n.replace('-Akkumulator', '').replace('akkumulator', 'akku')}</button>`).join('')}
+                </div>
+                <div class="flex rounded-xl overflow-hidden border-2 border-gray-300 mb-4 max-w-sm mx-auto">
+                    <button id="akModeEnt" onclick="setAkkuMode('entladen')" class="btn-tap flex-1 py-2.5 font-bold text-sm transition">Entladen</button>
+                    <button id="akModeLad" onclick="setAkkuMode('laden')" class="btn-tap flex-1 py-2.5 font-bold text-sm transition">Laden</button>
+                </div>
+                <div id="akkuBody"></div>
+            </div>`;
+        setAkkuTyp('blei');
+    }
+    function setAkkuTyp(t) { akkuTyp = t; drawAkku(); }
+    function setAkkuMode(m) { akkuMode = m; drawAkku(); }
+    function drawAkku() {
+        Object.keys(AKKU).forEach(k => { const b = document.getElementById('akTyp' + k); if (b) b.className = 'btn-tap px-3 py-1.5 rounded-full text-xs font-bold border-2 transition ' + (k === akkuTyp ? 'bg-primary border-primary text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-primary'); });
+        const ent = akkuMode === 'entladen';
+        document.getElementById('akModeEnt').className = 'btn-tap flex-1 py-2.5 font-bold text-sm transition ' + (ent ? 'bg-primary text-white' : 'bg-white text-gray-600');
+        document.getElementById('akModeLad').className = 'btn-tap flex-1 py-2.5 font-bold text-sm transition ' + (!ent ? 'bg-amber-500 text-white' : 'bg-white text-gray-600');
+        const a = AKKU[akkuTyp], m = ent ? a.entladen : a.laden;
+        document.getElementById('akkuBody').innerHTML = `
+            <div class="pop-anim">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div><h4 class="font-bold text-gray-800">${a.n}</h4><p class="text-xs text-gray-500">${ent ? 'läuft freiwillig ab — galvanische Zelle' : 'wird erzwungen — Vorgänge wie bei einer Elektrolyse'}</p></div>
+                    <span class="formula font-bold text-primary bg-light px-3 py-1 rounded-full text-sm flex-shrink-0">${a.u}</span>
+                </div>
+                <div class="grid md:grid-cols-2 gap-3 mb-3">
+                    <div class="bg-white border-2 ${ent ? 'border-red-200' : 'border-blue-200'} rounded-xl p-3">
+                        <p class="text-[11px] font-bold ${ent ? 'text-red-700' : 'text-blue-700'} uppercase mb-1">${m.rollen[0]}</p>
+                        <p class="text-xs text-gray-500 mb-1">${a.minusMat}</p>
+                        <p class="formula font-bold text-sm ${ent ? 'text-red-900' : 'text-blue-900'}">${m.minus}</p>
+                    </div>
+                    <div class="bg-white border-2 ${ent ? 'border-blue-200' : 'border-red-200'} rounded-xl p-3">
+                        <p class="text-[11px] font-bold ${ent ? 'text-blue-700' : 'text-red-700'} uppercase mb-1">${m.rollen[1]}</p>
+                        <p class="text-xs text-gray-500 mb-1">${a.plusMat}</p>
+                        <p class="formula font-bold text-sm ${ent ? 'text-blue-900' : 'text-red-900'}">${m.plus}</p>
+                    </div>
+                </div>
+                <p class="formula font-bold text-center bg-light border-2 border-primary rounded-xl p-3 text-primary text-sm mb-3">${m.ges}</p>
+                <p class="text-sm text-gray-700 mb-2">${m.hinweis}</p>
+                <p class="text-xs text-gray-600"><strong>Elektrolyt:</strong> ${a.elyt}</p>
+                <details class="group bg-amber-50 rounded-xl border border-amber-200 hint-accordion mt-3">
+                    <summary class="flex justify-between items-center font-bold cursor-pointer p-3 text-sm text-amber-900 hover:bg-amber-100 rounded-xl transition"><span><i data-lucide="info" class="inline w-4 h-4 mr-2"></i>Mehr dazu</span><i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i></summary>
+                    <div class="p-3 pt-0 text-sm text-amber-900 border-t border-amber-200/60 mt-1">${a.extra}</div>
+                </details>
+            </div>`;
+        lucide.createIcons();
+    }
+
+    // ================== VERGLEICHSTABELLE ==================
+    const VERGL = [
+        { n: 'Alkali-Mangan', u: '1,5 V', dichte: 'ca. 110 Wh/kg', zyklen: 'nicht ladbar', roh: 'Zink, Mangan — gut verfügbar', rec: 'Sammelpflicht, Rückgewinnung aufwendig' },
+        { n: 'Bleiakku', u: '2,05 V', dichte: 'ca. 40 Wh/kg', zyklen: 'einige hundert', roh: 'Blei — giftig, aber etabliert', rec: 'sehr gut, geschlossener Kreislauf' },
+        { n: 'NiMH', u: '1,2 V', dichte: 'ca. 80 Wh/kg', zyklen: 'ca. 500–1000', roh: 'Nickel, Seltene Erden', rec: 'gut möglich' },
+        { n: 'Lithium-Ionen', u: '3,3–3,8 V', dichte: 'über 150 Wh/kg', zyklen: 'ca. 500–1000', roh: 'Lithium, Cobalt — kritisch', rec: 'technisch möglich, noch wenig verbreitet' },
+        { n: 'Natrium-Ionen', u: 'ca. 3 V', dichte: 'ca. 100–160 Wh/kg', zyklen: 'ca. 1000+', roh: 'Natrium — sehr gut verfügbar', rec: 'ohne kritische Metalle einfacher' }
+    ];
+    function renderVergleich() {
+        document.getElementById('vergleichContainer').innerHTML = `
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+                <table class="w-full text-left border-collapse text-xs md:text-sm min-w-[620px]">
+                    <thead><tr class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
+                        <th class="p-2.5 font-bold">Speicher</th><th class="p-2.5 font-bold">Zellspannung</th><th class="p-2.5 font-bold">Spez. Energie</th>
+                        <th class="p-2.5 font-bold">Lebensdauer</th><th class="p-2.5 font-bold">Rohstoffe</th><th class="p-2.5 font-bold">Recycling</th>
+                    </tr></thead>
+                    <tbody>${VERGL.map((v, i) => `<tr class="border-b border-gray-100 ${i % 2 ? 'bg-gray-50/60' : ''}">
+                        <td class="p-2.5 font-bold text-gray-800">${v.n}</td><td class="p-2.5 formula">${v.u}</td><td class="p-2.5 formula">${v.dichte}</td>
+                        <td class="p-2.5">${v.zyklen}</td><td class="p-2.5">${v.roh}</td><td class="p-2.5">${v.rec}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-[11px] text-gray-500 mt-2">Richtwerte — je nach Bauform und Quelle weichen die Angaben ab. Für eine Bewertung kommt es auf die <em>Größenordnungen</em> und ihre Gewichtung an, nicht auf die zweite Nachkommastelle.</p>`;
+    }
+    // ================== CHECKLISTE (Wortlaut aus der Klausur-Checkliste) ==================
+    const CHECK = [
+        { g: '1. Elektrochemische Spannungsreihe', tab: 'reihe', items: [
+            'Ich kann den prinzipiellen Aufbau der elektrochemischen Spannungsreihe beschreiben und die Standard-Wasserstoff-Elektrode als Bezugspunkt erklären.',
+            'Ich kann anhand tabellierter Standardpotenziale begründen und voraussagen, ob eine Redoxreaktion zwischen zwei Redoxpaaren unter Standardbedingungen freiwillig abläuft.',
+            'Ich kann Metalle anhand ihrer Standardpotenziale in edle und unedle Metalle einteilen.'] },
+        { g: '2. Elektrochemische Spannungsquellen', tab: 'zellen', items: [
+            'Ich kann die Entstehung eines elektrochemischen Potenzials beschreiben und die Bedingungen für das Standardpotenzial erklären.',
+            'Ich kann den Aufbau eines galvanischen Elements beschreiben, skizzieren und die Vorgänge an Anode (Oxidation, Minuspol) und Kathode (Reduktion, Pluspol) benennen.',
+            'Ich kann die Teilgleichungen der Elektrodenprozesse formulieren und die Funktion des Diaphragmas bzw. der Salzbrücke für den Ladungsausgleich auf Teilchenebene erklären.',
+            'Ich kann für eine unbekannte Kombination von zwei Halbzellen den Elektronenfluss, die Polung sowie die Gesamtreaktion vorhersagen und in Form der Zellnotation angeben.'] },
+        { g: '3. Berechnung der Zellspannung', tab: 'spannung', items: [
+            'Ich kann tabellierte Standardpotenziale entnehmen und die Standardzellspannung eines galvanischen Elements berechnen.'] },
+        { g: '4. Batterien und Akkumulatoren', tab: 'akkus', items: [
+            'Ich kann die Funktionsweise einer Batterie anhand eines Beispiels erklären.',
+            'Ich kann den grundlegenden Unterschied zwischen Primärelementen und Sekundärelementen anhand der Reversibilität der Elektrodenreaktionen erklären.',
+            'Ich kann die chemischen Vorgänge beim Entladen und Laden eines Akkumulators anhand von Reaktionsgleichungen darstellen.',
+            'Ich kann verschiedene mobile Energiespeicher anhand fachlicher Kriterien vergleichend bewerten.'] },
+        { g: '5. Naturstoffe — nur Langzeitklausur', tab: null, note: 'Dieser Bereich wird über das Selbstlernpaket wiederholt und ist nicht Teil dieser App.', items: [
+            'Ich kann den molekularen Aufbau von Mono-, Di- und Polysacchariden in Fischer- und Haworth-Projektion beschreiben und die Ringschlussreaktion formulieren.',
+            'Ich kann die glykosidischen Bindungen eines Disaccharids benennen.',
+            'Ich kann die Nachweisreaktionen für Kohlenhydrate (Fehling, Tollens, Benedict) in Durchführung und Beobachtung darstellen.',
+            'Ich kann experimentelle Nachweisergebnisse begründen und deuten (reduzierende und nicht-reduzierende Zucker).',
+            'Ich kann die allgemeine Struktur von α-Aminosäuren, deren Ladungszustand in Abhängigkeit vom pH-Wert sowie den isoelektrischen Punkt erläutern.',
+            'Ich kann die Verknüpfung von Aminosäuren zur Peptidbindung durch Kondensation formulieren.',
+            'Ich kann die Strukturebenen von Proteinen beschreiben und Denaturierungsprozesse erklären.',
+            'Ich kann die Nachweisreaktionen für Aminosäuren und Proteine (Biuret, Xanthoprotein) beschreiben und unbekannte Proben identifizieren.'] }
+    ];
+    const ckId = (g, i) => 'ck' + g + '-' + i;
+    function ckDone() { return load('ckDone', []); }
+    function toggleCk(id) {
+        let d = ckDone();
+        d = d.includes(id) ? d.filter(x => x !== id) : d.concat(id);
+        store('ckDone', d); renderChecklist();
+    }
+    function renderChecklist() {
+        const d = ckDone();
+        const main = CHECK.filter(g => g.tab), extra = CHECK.filter(g => !g.tab);
+        const total = main.reduce((a, g) => a + g.items.length, 0);
+        const done = main.reduce((a, g, gi) => a + g.items.filter((_, i) => d.includes(ckId(CHECK.indexOf(g), i))).length, 0);
+        const pct = Math.round(done / total * 100);
+        document.getElementById('checklistArea').innerHTML = `
+            <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-6 mb-6">
+                <div class="flex items-start justify-between gap-3 mb-1">
+                    <h3 class="font-bold text-gray-800 text-lg">Checkliste zur Klausur</h3>
+                    <span class="text-xs font-bold text-primary bg-light px-3 py-1 rounded-full flex-shrink-0">${done} / ${total}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Hake ab, was du schon sicher kannst. Tippe auf den Pfeil, um direkt zum passenden Reiter zu springen.</p>
+                <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden mb-5"><div class="bg-primary h-full transition-all duration-500" style="width:${pct}%"></div></div>
+                ${CHECK.map((g, gi) => `
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h4 class="font-bold text-gray-700 text-sm">${g.g}</h4>
+                            ${g.tab ? `<button onclick="switchTab('${g.tab}')" class="btn-tap text-[11px] font-bold text-primary bg-light px-2 py-0.5 rounded-full hover:brightness-95">zum Reiter →</button>` : ''}
+                        </div>
+                        ${g.note ? `<p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2">${g.note}</p>` : ''}
+                        <div class="space-y-1.5">
+                            ${g.items.map((it, i) => {
+                                const id = ckId(gi, i), on = d.includes(id);
+                                return `<label class="flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${on ? 'bg-light border-[#dfeae3]' : 'bg-white border-gray-200 hover:border-gray-300'}">
+                                    <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleCk('${id}')" class="mt-0.5 w-4 h-4 accent-[#3d7c47] flex-shrink-0">
+                                    <span class="text-sm ${on ? 'text-[#2f6137]' : 'text-gray-700'}">${it}</span></label>`;
+                            }).join('')}
+                        </div>
+                    </div>`).join('')}
+            </div>`;
+    }
+
+    // ================== TRAININGSAUFGABEN ==================
+    const giv = s => `<span class="formula font-bold bg-white border border-gray-200 px-1.5 py-0.5 rounded whitespace-nowrap">${s}</span>`;
+    const T_SPANNUNG = [
+        { lvl: 'Einfach', q: `Ein galvanisches Element besteht aus einer Zink- und einer Silber-Halbzelle. Bestimmen Sie Anode und Kathode, formulieren Sie beide Teilgleichungen und die Gesamtgleichung, berechnen Sie ΔE⁰ und geben Sie die Zellnotation an.`,
+          hints: [{ t: 'Tipp 1', c: 'E⁰(Zn/Zn²⁺) = −0,76 V, E⁰(Ag/Ag⁺) = +0,80 V. Das kleinere Potenzial wird zur Anode.' },
+                  { t: 'Tipp 2', c: 'Zink gibt 2 Elektronen ab, Silber nimmt nur 1 auf — die Reduktion muss also mit 2 multipliziert werden.' }],
+          sol: `<p><b>Anode (Minuspol):</b> Zink, <b>Kathode (Pluspol):</b> Silber</p>
+                <p class="formula">Oxidation: Zn → Zn²⁺ + 2 e⁻</p>
+                <p class="formula">Reduktion: 2 Ag⁺ + 2 e⁻ → 2 Ag</p>
+                <p class="formula"><b>Gesamt: Zn + 2 Ag⁺ → Zn²⁺ + 2 Ag</b></p>
+                <p class="formula">ΔE⁰ = +0,80 V − (−0,76 V) = <b>1,56 V</b></p>
+                <p class="formula">Zellnotation: Zn | Zn²⁺ ‖ Ag⁺ | Ag</p>` },
+        { lvl: 'Einfach', q: `Berechnen Sie die Standardzellspannung der folgenden galvanischen Zellen:<br>a) ${giv('Pb | Pb²⁺ ‖ Cu²⁺ | Cu')}<br>b) ${giv('Al | Al³⁺ ‖ Ag⁺ | Ag')}<br>c) ${giv('Ni | Ni²⁺ ‖ Fe²⁺ | Fe')}`,
+          hints: [{ t: 'Tipp', c: 'ΔE⁰ = E⁰(Kathode) − E⁰(Anode). Bei c) prüfe zuerst, ob die Zelle überhaupt so herum aufgebaut sein kann.' }],
+          sol: `<p>a) 0,34 V − (−0,13 V) = <b>0,47 V</b></p>
+                <p>b) 0,80 V − (−1,66 V) = <b>2,46 V</b></p>
+                <p>c) Hier stimmt die Reihenfolge nicht: E⁰(Ni) = −0,25 V ist <i>größer</i> als E⁰(Fe) = −0,41 V. Eisen wäre die Anode, die Zelle müsste <span class="formula">Fe | Fe²⁺ ‖ Ni²⁺ | Ni</span> lauten, dann ist ΔE⁰ = −0,25 V − (−0,41 V) = <b>0,16 V</b>.</p>` },
+        { lvl: 'Mittel', q: `Erstellen Sie für die galvanische Zelle aus <b>Zink und Iod</b> die Teilgleichungen und die Gesamtgleichung. Geben Sie außerdem die Zellnotation an und berechnen Sie ΔE⁰.`,
+          hints: [{ t: 'Tipp 1', c: 'E⁰(Zn/Zn²⁺) = −0,76 V, E⁰(I⁻/I₂) = +0,54 V. In der Iod-Halbzelle ist die reduzierte Form das Iodid-Ion.' },
+                  { t: 'Tipp 2', c: 'Die Iod-Halbzelle enthält kein Metall als Elektrode — überlege, welche Elektrode dort nötig ist.' }],
+          sol: `<p class="formula">Oxidation: Zn → Zn²⁺ + 2 e⁻</p>
+                <p class="formula">Reduktion: I₂ + 2 e⁻ → 2 I⁻</p>
+                <p class="formula"><b>Gesamt: Zn + I₂ → Zn²⁺ + 2 I⁻</b></p>
+                <p class="formula">ΔE⁰ = +0,54 V − (−0,76 V) = <b>1,30 V</b></p>
+                <p class="formula">Zellnotation: Zn | Zn²⁺ ‖ I₂, I⁻ | Pt</p>
+                <p>Weil die reduzierte Form (I⁻) kein Metall ist, braucht die Halbzelle eine inerte <b>Ableitelektrode aus Platin</b>.</p>` },
+        { lvl: 'Mittel', q: `Im Unterricht wurde für die Zelle aus Zink und Kupfer eine Spannung von etwa <b>1,05 V</b> gemessen, berechnet sind jedoch 1,10 V. Erklären Sie die Abweichung.`,
+          hints: [{ t: 'Tipp', c: 'Unter welchen Bedingungen gelten die tabellierten Standardpotenziale?' }],
+          sol: `<p>Die tabellierten Werte gelten nur unter <b>Standardbedingungen</b>: c = 1 mol/l, ϑ = 25 °C, p = 1000 hPa. Im Schulversuch wurden meist verdünntere Lösungen (z. B. 0,1 mol/l) verwendet, außerdem weichen Temperatur und Konzentrationen leicht ab.</p>
+                <p>Hinzu kommen praktische Effekte: Übergangswiderstände an den Klemmen, nicht vollständig blanke Elektroden und der Innenwiderstand des Messgeräts. Die Messung liefert deshalb nur näherungsweise den berechneten Wert.</p>` },
+        { lvl: 'Schwer', q: `Begründen Sie mithilfe der Spannungsreihe, warum sich Zink in Salzsäure unter Gasentwicklung auflöst, Kupfer dagegen nicht. Formulieren Sie für den ablaufenden Fall die Reaktionsgleichung.`,
+          hints: [{ t: 'Tipp 1', c: 'Das entscheidende Redoxpaar ist H₂ + 2 H₂O ⇌ 2 H₃O⁺ + 2 e⁻ mit E⁰ = 0 V.' },
+                  { t: 'Tipp 2', c: 'Welches Metall steht in der Spannungsreihe über, welches unter diesem Nullpunkt?' }],
+          sol: `<p>Zink steht mit E⁰ = −0,76 V <b>über</b> dem Wasserstoff-Paar (0 V). Die Elektronen gehen bergab, Zink wird von den Oxonium-Ionen oxidiert:</p>
+                <p class="formula"><b>Zn + 2 H₃O⁺ → Zn²⁺ + H₂ + 2 H₂O</b></p>
+                <p>Kupfer steht mit E⁰ = +0,34 V <b>unter</b> dem Wasserstoff-Paar. Die Elektronen müssten bergauf fließen, was nicht freiwillig geschieht — Kupfer löst sich in Salzsäure nicht auf. Allgemein gilt: Metalle mit negativem Standardpotenzial lösen sich in Säuren unter Wasserstoffentwicklung, edle Metalle nicht.</p>` },
+        { lvl: 'Schwer', q: `Ein Schüler baut eine Zelle aus einer Eisen- und einer Silber-Halbzelle und verbindet die Halbzellen mit einer Salzbrücke aus Kaliumchlorid-Lösung. Er misst zunächst eine Spannung, nach kurzer Zeit bricht sie jedoch ein, und in der Silber-Halbzelle bildet sich ein weißer Niederschlag. Erklären Sie.`,
+          hints: [{ t: 'Tipp', c: 'Welche Ionen treffen in der Silber-Halbzelle aufeinander, wenn Chlorid-Ionen hineinwandern?' }],
+          sol: `<p>Beim Betrieb wandern die Anionen der Salzbrücke zum Ladungsausgleich in die <b>Anodenhalbzelle</b> — Chlorid-Ionen gelangen aber durch Diffusion auch in die Silber-Halbzelle. Dort bilden sie mit den Silber-Ionen schwer lösliches <b>Silberchlorid</b>:</p>
+                <p class="formula">Ag⁺ + Cl⁻ → AgCl ↓</p>
+                <p>Dadurch sinkt c(Ag⁺) stark ab, die Silber-Halbzelle verarmt an reagierenden Ionen und die Spannung bricht ein. Für Zellen mit Silber verwendet man deshalb eine Salzbrücke mit <b>Kaliumnitrat</b>, weil alle Nitrate gut löslich sind.</p>` }
+    ];
+    const T_BATT = [
+        { lvl: 'Einfach', q: `Erklären Sie den Unterschied zwischen einem Primär- und einem Sekundärelement. Nennen Sie je ein Beispiel und begründen Sie, warum eine Zink-Kohle-Batterie nicht wieder aufgeladen werden sollte.`,
+          hints: [{ t: 'Tipp', c: 'Entscheidend ist, ob die Entladeprodukte an der Elektrode haften bleiben und die Reaktionen sich umkehren lassen.' }],
+          sol: `<p><b>Primärelement</b> (z. B. Alkali-Mangan-Batterie): Die Elektrodenreaktionen sind <b>nicht umkehrbar</b>, die Zelle lässt sich nicht wieder aufladen.</p>
+                <p><b>Sekundärelement</b> (z. B. Bleiakkumulator): Die Reaktionen sind <b>umkehrbar</b>, durch Anlegen einer äußeren Spannung lässt sich der Ausgangszustand wiederherstellen.</p>
+                <p>Bei der Zink-Kohle-Batterie wird der Zinkbecher beim Entladen teilweise zerstört; die Reaktionsprodukte bleiben nicht geordnet an der Elektrode. Ein Ladeversuch kann die Hülle durchlöchern, die Batterie läuft aus oder es entsteht Gasdruck.</p>` },
+        { lvl: 'Mittel', q: `Stellen Sie die Funktionsweise des <b>Bleiakkumulators</b> beim Entladen dar. Formulieren Sie die Reaktionsgleichungen für die Oxidation und die Reduktion sowie die Gesamtgleichung.`,
+          hints: [{ t: 'Tipp 1', c: 'Minuspol ist Blei (Pb), Pluspol Blei(IV)-oxid (PbO₂), Elektrolyt verdünnte Schwefelsäure. An beiden Elektroden entsteht dasselbe Produkt.' },
+                  { t: 'Tipp 2', c: 'Blei wird von 0 auf +II oxidiert, das Blei in PbO₂ von +IV auf +II reduziert. Beide bilden PbSO₄.' }],
+          sol: `<p class="formula">Minuspol (Anode, Oxidation): Pb + SO₄²⁻ → PbSO₄ + 2 e⁻</p>
+                <p class="formula">Pluspol (Kathode, Reduktion): PbO₂ + SO₄²⁻ + 4 H₃O⁺ + 2 e⁻ → PbSO₄ + 6 H₂O</p>
+                <p class="formula"><b>Gesamt: Pb + PbO₂ + 2 H₂SO₄ → 2 PbSO₄ + 2 H₂O</b></p>
+                <p>ΔE⁰ ≈ 1,69 V − (−0,36 V) ≈ <b>2,05 V</b> je Zelle. Eine 12-V-Starterbatterie enthält sechs in Reihe geschaltete Zellen.</p>` },
+        { lvl: 'Mittel', q: `Beim Laden wird der Bleiakkumulator an eine äußere Spannungsquelle angeschlossen. Erläutern Sie, was an den Elektroden geschieht, und formulieren Sie die Gleichungen. Gehen Sie dabei auf die Begriffe Anode und Kathode ein.`,
+          hints: [{ t: 'Tipp', c: 'Die Pole bleiben gleich, aber die Benennung Anode/Kathode richtet sich immer danach, wo die Oxidation stattfindet.' }],
+          sol: `<p class="formula">Minuspol (jetzt Kathode, Reduktion): PbSO₄ + 2 e⁻ → Pb + SO₄²⁻</p>
+                <p class="formula">Pluspol (jetzt Anode, Oxidation): PbSO₄ + 6 H₂O → PbO₂ + SO₄²⁻ + 4 H₃O⁺ + 2 e⁻</p>
+                <p class="formula"><b>Gesamt: 2 PbSO₄ + 2 H₂O → Pb + PbO₂ + 2 H₂SO₄</b></p>
+                <p>Die Vorgänge entsprechen einer <b>Elektrolyse</b>: Die Reaktion läuft nicht freiwillig ab, sondern wird erzwungen. Wichtig: Beim Laden ist der <b>Pluspol die Anode</b>, denn dort findet die Oxidation statt — beim Entladen war es umgekehrt.</p>` },
+        { lvl: 'Mittel', q: `Die Konzentration der Schwefelsäure dient beim Bleiakkumulator als Indikator für den Ladezustand. Erklären Sie diesen Zusammenhang mithilfe der Gesamtgleichung.`,
+          hints: [{ t: 'Tipp', c: 'Schau dir an, auf welcher Seite der Entladegleichung die Schwefelsäure steht.' }],
+          sol: `<p>Beim Entladen wird Schwefelsäure <b>verbraucht</b> und Wasser gebildet (<span class="formula">Pb + PbO₂ + 2 H₂SO₄ → 2 PbSO₄ + 2 H₂O</span>). Die Konzentration und damit die <b>Dichte</b> der Elektrolytlösung sinkt.</p>
+                <p>Beim Laden läuft die Reaktion rückwärts, Schwefelsäure entsteht zurück, die Dichte steigt. Über eine Dichtemessung lässt sich der Ladezustand bestimmen: etwa 1,28 g/cm³ bei voller Ladung, 1,10 g/cm³ bei entladenem Akku.</p>` },
+        { lvl: 'Schwer', q: `Vergleichen Sie Bleiakkumulator und Lithium-Ionen-Akkumulator als Energiespeicher für ein <b>Elektroauto</b>. Bewerten Sie begründet, welcher Speicher geeigneter ist.`,
+          hints: [{ t: 'Tipp 1', c: 'Nutze das Gerüst: Kriterium nennen → Fakten → für den Anwendungsfall gewichten → Fazit.' },
+                  { t: 'Tipp 2', c: 'Welches Kriterium ist bei einem Fahrzeug besonders wichtig, das seinen Speicher ständig mitbewegen muss?' }],
+          sol: `<p><b>Spezifische Energie:</b> Bleiakku ca. 40 Wh/kg, Lithium-Ionen über 150 Wh/kg. Für ein Fahrzeug ist dieses Kriterium entscheidend, weil der Speicher ständig mitbewegt wird. Ein Bleiakku müsste so schwer sein, dass ein großer Teil der Energie allein für seinen Transport aufgewendet würde.</p>
+                <p><b>Zellspannung:</b> 2,05 V gegenüber 3,3–3,8 V — für dieselbe Gesamtspannung braucht man beim Bleiakku deutlich mehr Zellen.</p>
+                <p><b>Rohstoffe und Recycling:</b> Hier schneidet der Bleiakku besser ab. Blei ist giftig, wird aber in einem etablierten, nahezu geschlossenen Kreislauf zurückgewonnen. Bei Lithium-Ionen sind Lithium und Cobalt kritisch, Abbau und Recycling sind problematischer.</p>
+                <p><b>Fazit:</b> Für das Elektroauto überwiegt die spezifische Energie alle anderen Kriterien, weil ohne sie die Reichweite nicht erreichbar ist. Deshalb ist der <b>Lithium-Ionen-Akku geeigneter</b> — die Nachteile bei Rohstoffen und Recycling müssen durch Rücknahmesysteme aufgefangen werden. Bei einem stationären Notstromspeicher, wo Masse keine Rolle spielt, könnte die Bewertung anders ausfallen.</p>` },
+        { lvl: 'Schwer', q: `Diskutieren Sie zwei mögliche Belastungen für die Umwelt, die von Bleiakkumulatoren ausgehen — insbesondere bei unsachgemäßer Entsorgung.`,
+          hints: [],
+          sol: `<p><b>1. Schwermetall Blei:</b> Blei und Blei(II)-sulfat sind giftig und reproduktionstoxisch. Gelangen sie über eine wilde Deponie in den Boden, können Blei-Ionen ins Grundwasser ausgewaschen werden. Als Schwermetall-Ionen stören sie — ähnlich wie Kupfer-Ionen — die Tertiärstruktur von Proteinen und hemmen Enzyme; sie reichern sich zudem in Organismen an.</p>
+                <p><b>2. Schwefelsäure als Elektrolyt:</b> Läuft die stark saure Elektrolytlösung aus, versauert sie den Boden und kann Gewässer schädigen. Außerdem löst die Säure weitere Schwermetalle aus dem Untergrund und macht sie beweglich.</p>
+                <p>Deshalb unterliegen Bleiakkumulatoren der Rücknahmepflicht; durch Pfandsysteme liegt die Recyclingquote sehr hoch, und Blei wie Schwefelsäure werden im Kreislauf geführt.</p>` }
+    ];
+    const T_ZELLEN = [
+        { lvl: 'Einfach', q: `Beschreiben Sie den Aufbau des Daniell-Elements. Benennen Sie beide Elektroden mit Pol, Vorgang und Teilgleichung und erklären Sie die Funktion des Diaphragmas auf Teilchenebene.`,
+          hints: [{ t: 'Tipp', c: 'Denke an den Ladungsausgleich: Was würde ohne das Diaphragma in den beiden Halbzellen passieren?' }],
+          sol: `<p>Ein Zinkblech taucht in Zinksulfat-Lösung, ein Kupferblech in Kupfer(II)-sulfat-Lösung. Beide Halbzellen sind durch ein Diaphragma getrennt und über einen Leitungsdraht verbunden.</p>
+                <p class="formula">Anode (Minuspol, Oxidation): Zn → Zn²⁺ + 2 e⁻</p>
+                <p class="formula">Kathode (Pluspol, Reduktion): Cu²⁺ + 2 e⁻ → Cu</p>
+                <p class="formula"><b>Gesamt: Zn + Cu²⁺ → Zn²⁺ + Cu</b>, U⁰ = 1,10 V</p>
+                <p><b>Diaphragma:</b> Die poröse Trennwand verhindert, dass sich die Lösungen rasch durchmischen, lässt aber Ionen hindurch. Ohne diesen Ladungsausgleich würde die Anodenhalbzelle durch entstehende Zn²⁺-Ionen positiv, die Kathodenhalbzelle durch verbrauchte Cu²⁺-Ionen negativ — der Elektronenfluss käme sofort zum Erliegen. Zum Ausgleich wandern Sulfat-Ionen zur Anode und Zink-Ionen zur Kathode.</p>` },
+        { lvl: 'Mittel', q: `Erklären Sie mithilfe von Lösungstension und elektrochemischer Doppelschicht, wie die Spannung des Daniell-Elements zustande kommt.`,
+          hints: [{ t: 'Tipp', c: 'Welches der beiden Metalle bildet leichter Ionen — und was bleibt dabei im Metall zurück?' }],
+          sol: `<p>Jedes Metall besitzt die Fähigkeit, in wässriger Lösung Ionen zu bilden (<b>Lösungstension</b>). Gehen Metall-Ionen in Lösung, bleiben ihre Elektronen im Metall zurück, das sich dadurch negativ auflädt. Das entstehende elektrische Feld zieht Kationen zurück — es stellt sich ein dynamisches Gleichgewicht ein, die <b>elektrochemische Doppelschicht</b>.</p>
+                <p>Zink hat die größere Lösungstension: Am Zinkblech gehen mehr Ionen in Lösung als am Kupferblech, dort bleiben also mehr Elektronen zurück. Es herrscht am Zink ein höherer „Elektronendruck". Verbindet man beide Elektroden, fließen Elektronen vom Ort höheren zum Ort niedrigeren Elektronendrucks, also von Zink zu Kupfer. Die gemessene Leerlaufspannung ist die <b>Differenz der beiden Redoxpotenziale</b>.</p>` },
+        { lvl: 'Schwer', q: `Alex schreibt für ein Element aus Blei und Silber: <span class="formula">„Am Blei findet die Reduktion statt, es ist der Pluspol. ΔE⁰ = 0,80 V − 0,13 V = 0,67 V."</span> Finden und korrigieren Sie alle Fehler.`,
+          hints: [{ t: 'Tipp', c: 'Prüfe drei Dinge getrennt: die Zuordnung des Vorgangs, die Polung und das Vorzeichen in der Rechnung.' }],
+          sol: `<p><b>Fehler 1 — Vorgang:</b> Blei hat mit −0,13 V das kleinere Potenzial und ist damit die <b>Anode</b>; dort findet die <b>Oxidation</b> statt (Pb → Pb²⁺ + 2 e⁻).</p>
+                <p><b>Fehler 2 — Polung:</b> Die Anode ist bei der galvanischen Zelle der <b>Minuspol</b>, nicht der Pluspol.</p>
+                <p><b>Fehler 3 — Vorzeichen:</b> Das Anodenpotenzial ist negativ und wird abgezogen: ΔE⁰ = 0,80 V − (−0,13 V) = <b>0,93 V</b>.</p>
+                <p class="formula">Korrekt: Pb | Pb²⁺ ‖ Ag⁺ | Ag mit ΔE⁰ = 0,93 V</p>` }
+    ];
+    const TRAIN = [
+        { key: 'quiz', type: 'quiz', tag: 'Basiswissen', color: 'indigo', icon: 'brain-circuit', title: 'Wissens-Quiz', desc: 'Zwölf Fragen quer durch die gesamte Einheit — mit Erklärung zu jeder Antwort.' },
+        { key: 'tz', type: 'levels', tag: 'Grundlagen', color: 'green', icon: 'zap', title: 'Galvanische Zellen', desc: 'Aufbau, Diaphragma, Lösungstension und Doppelschicht.', tasks: T_ZELLEN },
+        { key: 'ts', type: 'levels', tag: 'Anwendung', color: 'blue', icon: 'calculator', title: 'Spannungsreihe & Zellspannung', desc: 'Reaktionen vorhersagen, Zellen aufstellen, ΔE⁰ berechnen.', tasks: T_SPANNUNG },
+        { key: 'tb', type: 'levels', tag: 'Anwendung', color: 'amber', icon: 'battery-charging', title: 'Batterien & Akkumulatoren', desc: 'Primär und Sekundär, Entladen und Laden, Bewertung von Energiespeichern.', tasks: T_BATT }
+    ];
+    const TR_COLORS = {
+        indigo: { tag: 'bg-indigo-100 text-indigo-700', icon: 'text-indigo-500', border: 'border-t-indigo-500', btn: 'bg-indigo-500' },
+        green: { tag: 'bg-green-100 text-green-700', icon: 'text-green-600', border: 'border-t-green-500', btn: 'bg-green-500' },
+        blue: { tag: 'bg-blue-100 text-blue-700', icon: 'text-blue-500', border: 'border-t-blue-500', btn: 'bg-blue-500' },
+        amber: { tag: 'bg-amber-100 text-amber-800', icon: 'text-amber-500', border: 'border-t-amber-400', btn: 'bg-amber-400' }
+    };
+    const LVL = { Einfach: 'bg-green-100 text-green-700 border-green-200', Mittel: 'bg-amber-100 text-amber-800 border-amber-200', Schwer: 'bg-red-100 text-red-700 border-red-200' };
+    const LEVELS = ['Einfach', 'Mittel', 'Schwer'];
+    let trOpen = null, trFilter = 'Alle';
+    function trItems(t) { return t.type === 'quiz' ? ['quiz'] : t.tasks.map((_, i) => t.key + '-' + i); }
+    function trDoneList() { return load('trDone', []); }
+    function isDone(id) { return trDoneList().includes(id); }
+    function setDone(id, v) { let d = trDoneList(); if (v && !d.includes(id)) d = d.concat(id); if (!v) d = d.filter(x => x !== id); store('trDone', d); }
+
+    function renderTraining() {
+        const all = TRAIN.flatMap(trItems), n = all.filter(isDone).length, pct = Math.round(n / all.length * 100);
+        document.getElementById('trOverview').innerHTML = `
+            <div class="mb-6">
+                <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Training & Klausurvorbereitung</h2>
+                <p class="text-gray-600">Bearbeite die Aufgaben schriftlich auf Papier. Tipps und Musterlösungen dienen zur Überprüfung deiner Ansätze.</p>
+            </div>
+            <div id="checklistArea"></div>
+            <div class="flex justify-between text-sm font-bold text-gray-700 mb-2"><span>Aufgaben (${n}/${all.length} erledigt)</span><span>${pct}%</span></div>
+            <div class="w-full bg-gray-200 h-1.5 rounded-full mb-6 overflow-hidden"><div class="bg-primary h-full transition-all duration-500" style="width:${pct}%"></div></div>
+            <div class="grid md:grid-cols-2 gap-5">${TRAIN.map(trCard).join('')}</div>`;
+        renderChecklist();
+        lucide.createIcons();
+    }
+    function trCard(t) {
+        const c = TR_COLORS[t.color], ids = trItems(t), n = ids.filter(isDone).length, full = n === ids.length;
+        const levels = t.type === 'levels'
+            ? `<div class="flex flex-wrap gap-1.5 mb-4">${LEVELS.map(l => { const k = t.tasks.filter(x => x.lvl === l).length; return k ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${LVL[l]}">${k}× ${l}</span>` : ''; }).join('')}</div>` : '';
+        const sub = t.type === 'quiz' ? (full ? 'abgeschlossen' : '12 Fragen') : `${n}/${ids.length} erledigt`;
+        return `<div role="button" tabindex="0" onclick="openTrain('${t.key}')" onkeydown="if(event.key==='Enter')openTrain('${t.key}')"
+                class="bg-white rounded-2xl p-6 border border-gray-100 border-t-4 ${c.border} flex flex-col h-full shadow-[0_4px_20px_rgba(0,0,0,0.04)] cursor-pointer group hover:shadow-[0_8px_30px_rgba(0,0,0,0.09)] hover:-translate-y-1 transition-all duration-200 relative">
+                ${full ? '<div class="absolute top-4 right-4 text-primary"><i data-lucide="check-circle" class="w-5 h-5"></i></div>' : ''}
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded w-max mb-4 ${c.tag}">${t.tag}</span>
+                <h3 class="font-bold text-lg text-gray-800 mb-2 flex items-start gap-2 leading-snug"><i data-lucide="${t.icon}" class="w-5 h-5 flex-shrink-0 mt-0.5 ${c.icon}"></i><span>${t.title}</span></h3>
+                <p class="text-sm text-gray-600 mb-4 flex-grow">${t.desc}</p>
+                ${levels}
+                <div class="flex items-center justify-between w-full font-bold text-sm text-gray-800 pt-4 border-t border-gray-100">
+                    <span>Aufgaben öffnen<span class="block text-xs font-medium text-gray-400">${sub}</span></span>
+                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-white transition-transform group-hover:translate-x-1 ${c.btn}"><i data-lucide="arrow-right" class="w-4 h-4"></i></span>
+                </div></div>`;
+    }
+    function openTrain(key) {
+        trOpen = key; trFilter = 'Alle';
+        document.getElementById('trOverview').classList.add('hidden');
+        document.getElementById('trDetail').classList.remove('hidden');
+        renderTrDetail(); document.getElementById('mainScrollArea').scrollTop = 0;
+    }
+    function closeTrain() {
+        trOpen = null;
+        document.getElementById('trDetail').classList.add('hidden');
+        document.getElementById('trOverview').classList.remove('hidden');
+        renderTraining(); document.getElementById('mainScrollArea').scrollTop = 0;
+    }
+    function renderTrDetail() {
+        const t = TRAIN.find(x => x.key === trOpen), c = TR_COLORS[t.color], ids = trItems(t);
+        const body = t.type === 'quiz' ? quizMarkup() : levelsBody(t);
+        document.getElementById('trDetail').innerHTML = `
+            <button onclick="closeTrain()" class="text-gray-500 hover:text-gray-800 font-bold text-sm mb-5 flex items-center gap-2 transition hover:-translate-x-1"><i data-lucide="arrow-left" class="w-4 h-4"></i> Zurück zur Übersicht</button>
+            <div class="bg-white border border-gray-200 border-t-4 ${c.border} rounded-2xl p-5 md:p-8 shadow-sm">
+                <div class="flex items-start gap-3 mb-3">
+                    <i data-lucide="${t.icon}" class="w-8 h-8 flex-shrink-0 ${c.icon}"></i>
+                    <div class="flex-1 min-w-0"><span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${c.tag}">${t.tag}</span>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mt-1 leading-tight">${t.title}</h2></div>
+                    ${t.type !== 'quiz' ? `<span id="trDetailCount" class="flex-shrink-0 text-xs font-bold text-primary bg-light px-3 py-1 rounded-full">${ids.filter(isDone).length}/${ids.length}</span>` : ''}
+                </div>
+                <p class="text-gray-600 mb-5">${t.desc}</p>
+                ${body}</div>`;
+        lucide.createIcons();
+    }
+    function hintBlocks(h) {
+        return h.map(x => `<details class="group bg-blue-50 rounded-xl border border-blue-100 hint-accordion">
+            <summary class="flex justify-between items-center font-bold cursor-pointer p-3 text-sm text-blue-700 hover:bg-blue-100 rounded-xl transition"><span><i data-lucide="lightbulb" class="inline w-4 h-4 mr-2"></i>${x.t}</span><i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i></summary>
+            <div class="p-3 pt-0 text-sm text-blue-900 border-t border-blue-100/50 mt-1 leading-relaxed">${x.c}</div></details>`).join('');
+    }
+    function solBlock(inner) {
+        return `<details class="group bg-green-50 rounded-xl border border-green-200 hint-accordion">
+            <summary class="flex justify-between items-center font-bold cursor-pointer p-3.5 text-green-800 hover:bg-green-100 rounded-xl transition"><span><i data-lucide="check-circle" class="inline w-5 h-5 mr-2"></i>Musterlösung</span><i data-lucide="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180"></i></summary>
+            <div class="p-4 pt-0 text-green-900 border-t border-green-200/50 mt-2 leading-relaxed text-sm space-y-1.5">${inner}</div></details>`;
+    }
+    function doneBtn(id) {
+        const d = isDone(id);
+        return `<button id="done-${id}" onclick="toggleTrDone('${id}')" class="btn-tap w-full mt-3 py-2.5 rounded-xl font-bold border-2 text-sm transition ${d ? 'bg-light border-primary text-primary' : 'bg-white border-gray-300 text-gray-600 hover:border-primary hover:text-primary'}">${d ? '✓ Erledigt' : 'Als erledigt markieren'}</button>`;
+    }
+    function toggleTrDone(id) {
+        const now = !isDone(id); setDone(id, now);
+        const b = document.getElementById('done-' + id); if (b) b.outerHTML = doneBtn(id);
+        const box = document.getElementById('box-' + id);
+        if (box) { box.classList.toggle('border-primary', now); box.classList.toggle('border-gray-200', !now); }
+        const t = TRAIN.find(x => x.key === trOpen), ids = trItems(t), cnt = document.getElementById('trDetailCount');
+        if (cnt) cnt.textContent = `${ids.filter(isDone).length}/${ids.length}`;
+    }
+    function levelsBody(t) {
+        const count = l => l === 'Alle' ? t.tasks.length : t.tasks.filter(x => x.lvl === l).length;
+        const pills = ['Alle', ...LEVELS].filter(l => count(l) > 0).map(l => `<button onclick="setTrFilter('${l}')" class="btn-tap px-3.5 py-1.5 rounded-full text-sm font-bold border-2 transition ${trFilter === l ? 'bg-gray-800 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'}">${l} <span class="opacity-60">${count(l)}</span></button>`).join('');
+        let groups = '';
+        LEVELS.forEach(l => {
+            if (trFilter !== 'Alle' && trFilter !== l) return;
+            const items = t.tasks.map((x, i) => ({ x, i })).filter(o => o.x.lvl === l);
+            if (!items.length) return;
+            groups += `<div class="flex items-center gap-3 mt-7 mb-3"><span class="text-sm font-bold px-3 py-1 rounded-full border ${LVL[l]}">${l}</span><div class="flex-1 h-px bg-gray-200"></div></div>`
+                + items.map(o => taskCard(t, o.x, o.i)).join('');
+        });
+        return `<div class="flex flex-wrap gap-2">${pills}</div>` + groups;
+    }
+    function setTrFilter(l) { trFilter = l; renderTrDetail(); }
+    function taskCard(t, x, i) {
+        const id = t.key + '-' + i, num = (i + 1);
+        return `<div id="box-${id}" class="border-2 ${isDone(id) ? 'border-primary' : 'border-gray-200'} rounded-2xl p-4 md:p-5 mb-4 bg-white">
+            <div class="flex items-center gap-2 mb-3"><span class="formula font-bold text-primary">${t.key.slice(1).toUpperCase()}.${num}</span>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full border ${LVL[x.lvl]}">${x.lvl}</span></div>
+            <div class="bg-[#f4f8f6] border border-[#dfeae3] rounded-xl p-4 mb-3"><p class="text-gray-800 leading-relaxed">${x.q}</p></div>
+            <div class="flex flex-col gap-2">${hintBlocks(x.hints)}${solBlock(x.sol)}</div>
+            ${doneBtn(id)}</div>`;
+    }
+    function quizMarkup() {
+        return `<div id="quiz-container" class="bg-gray-50 rounded-2xl p-5 md:p-6 border border-gray-200">
+            <div class="flex justify-between items-center mb-4 gap-3">
+                <h4 class="font-bold text-gray-800 text-base md:text-lg">Fragen quer durch die gesamte Einheit</h4>
+                <div id="quiz-progress" class="bg-white px-4 py-2 rounded-full font-bold text-primary shadow-inner border border-gray-200 flex-shrink-0">0 / 12</div>
+            </div>
+            <div id="quiz-start-screen" class="text-center py-8 reveal-anim"><button onclick="startQuiz()" class="btn-tap btn-hover inline-block bg-primary text-white py-4 px-10 rounded-2xl font-bold text-xl shadow-lg">Quiz starten</button></div>
+            <div id="quiz-game-screen" class="hidden reveal-anim">
+                <h4 id="quiz-question" class="text-lg md:text-xl font-bold text-gray-800 mb-5 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm"></h4>
+                <div id="quiz-options" class="flex flex-col gap-3 mb-5"></div>
+                <div id="quiz-feedback" class="hidden p-4 rounded-xl font-medium mb-4 reveal-anim"></div>
+                <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="btn-tap hidden w-full bg-gray-800 hover:bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg">Weiter →</button>
+            </div>
+            <div id="quiz-end-screen" class="hidden text-center py-8 reveal-anim">
+                <div class="w-20 h-20 bg-light text-primary rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="award" class="w-10 h-10"></i></div>
+                <h4 class="text-2xl md:text-3xl font-black text-gray-800 mb-2">Quiz beendet!</h4>
+                <p class="text-lg text-gray-600 mb-2">Du hast <strong id="quiz-score" class="text-primary">0</strong> von <span id="quiz-total">12</span> Fragen richtig beantwortet.</p>
+                <p id="quiz-verdict" class="text-sm text-gray-500 mb-6"></p>
+                <div class="flex flex-wrap gap-3 justify-center">
+                    <button onclick="startQuiz()" class="btn-tap bg-primary hover:bg-[#2f6137] text-white py-2.5 px-6 rounded-xl font-bold">Erneut spielen</button>
+                    <button onclick="closeTrain()" class="btn-tap bg-gray-200 hover:bg-gray-300 text-gray-700 py-2.5 px-6 rounded-xl font-bold">Zurück</button>
+                </div></div></div>`;
+    }
+
+    // ================== QUIZ ==================
+    const QUIZ = [
+        { q: 'Was macht eine galvanische Zelle aus?', o: ['Sie erzwingt eine Redoxreaktion durch eine äußere Spannung', 'Sie macht eine freiwillig ablaufende Redoxreaktion durch räumliche Trennung als Spannungsquelle nutzbar', 'Sie erzeugt Strom aus einer Säure-Base-Reaktion', 'Sie trennt Ionen durch ein Magnetfeld'], a: 1, e: 'Oxidation und Reduktion laufen in getrennten Halbzellen ab; die Elektronen müssen den Weg über den Leitungsdraht nehmen und sind so als Strom nutzbar.' },
+        { q: 'Welche Aussage über die Anode einer galvanischen Zelle ist richtig?', o: ['Oxidation, Minuspol', 'Oxidation, Pluspol', 'Reduktion, Minuspol', 'Reduktion, Pluspol'], a: 0, e: 'An der Anode findet die Oxidation statt. Weil dort die Elektronen in den Draht austreten, ist sie bei der galvanischen Zelle der Minuspol.' },
+        { q: 'Welches Standardpotenzial hat die Standard-Wasserstoff-Halbzelle?', o: ['−1,00 V', '0 V per Definition', '+0,34 V', 'Das hängt vom pH-Wert ab'], a: 1, e: 'Ihr Potenzial wird definitionsgemäß auf 0 V festgelegt — alle anderen Standardpotenziale beziehen sich darauf.' },
+        { q: 'Welche Bedingungen gelten für Standardpotenziale?', o: ['0 °C, 1013 hPa, c = 0,1 mol/l', '25 °C, 1000 hPa, c = 1 mol/l', '20 °C, beliebiger Druck, c = 1 mol/l', '25 °C, Vakuum, reines Wasser'], a: 1, e: 'Standardbedingungen in der Elektrochemie: ϑ = 25 °C, p = 1000 hPa und c = 1 mol/l für alle beteiligten Ionen.' },
+        { q: 'Ein Eisennagel wird in Kupfer(II)-sulfat-Lösung gelegt. Was passiert?', o: ['Nichts, Eisen ist edler', 'Kupfer scheidet sich am Nagel ab, Fe²⁺ geht in Lösung', 'Das Kupfer löst sich auf', 'Es entsteht Wasserstoff'], a: 1, e: 'Fe steht mit −0,41 V über Cu mit +0,34 V. Die Elektronen gehen bergab: Fe + Cu²⁺ → Fe²⁺ + Cu.' },
+        { q: 'Wie berechnet man die Standardzellspannung?', o: ['ΔE⁰ = E⁰(Anode) − E⁰(Kathode)', 'ΔE⁰ = E⁰(Kathode) − E⁰(Anode)', 'ΔE⁰ = E⁰(Anode) + E⁰(Kathode)', 'ΔE⁰ = E⁰(Kathode) · E⁰(Anode)'], a: 1, e: 'ΔE⁰ = E⁰(Kathode) − E⁰(Anode) = E⁰(Pluspol) − E⁰(Minuspol). Das Ergebnis ist bei einer galvanischen Zelle immer positiv.' },
+        { q: 'Zelle aus Zink (−0,76 V) und Silber (+0,80 V). Wie groß ist ΔE⁰?', o: ['0,04 V', '1,56 V', '−1,56 V', '0,76 V'], a: 1, e: '0,80 V − (−0,76 V) = 1,56 V. Das negative Anodenpotenzial wird abgezogen — minus mal minus ergibt plus.' },
+        { q: 'Wofür steht der Doppelstrich ‖ in der Zellnotation?', o: ['Für den Leitungsdraht', 'Für das Diaphragma bzw. die Salzbrücke', 'Für eine Phasengrenze', 'Für den Pluspol'], a: 1, e: 'Der Doppelstrich trennt die beiden Halbzellen, der einfache Strich steht für eine Phasengrenze.' },
+        { q: 'Warum braucht eine Iod-Halbzelle eine Platinelektrode?', o: ['Platin reagiert mit Iod', 'Weil die reduzierte Form kein Metall ist und eine inerte Ableitelektrode nötig ist', 'Um die Spannung zu erhöhen', 'Um das Diaphragma zu ersetzen'], a: 1, e: 'Ist die reduzierte Form kein Metall (hier I⁻), braucht man eine chemisch wenig angreifbare Ableitelektrode — meist Platin oder Graphit.' },
+        { q: 'Was unterscheidet ein Sekundär- von einem Primärelement?', o: ['Es liefert mehr Spannung', 'Die Elektrodenreaktionen sind umkehrbar, es ist wiederaufladbar', 'Es enthält keinen Elektrolyten', 'Es arbeitet ohne Redoxreaktion'], a: 1, e: 'Wiederaufladbar ist eine Zelle nur, wenn die Entladeprodukte an der Elektrode haften und die Reaktionen sich umkehren lassen.' },
+        { q: 'Was geschieht beim Entladen des Bleiakkumulators mit der Schwefelsäure?', o: ['Sie wird verbraucht, die Dichte sinkt', 'Sie entsteht, die Dichte steigt', 'Sie bleibt unverändert', 'Sie verdampft'], a: 0, e: 'Pb + PbO₂ + 2 H₂SO₄ → 2 PbSO₄ + 2 H₂O. Die Säure wird verbraucht — deshalb zeigt die Dichte den Ladezustand an.' },
+        { q: 'Beim Laden eines Akkus gilt:', o: ['Der Minuspol bleibt die Anode', 'Der Pluspol wird zur Anode, weil dort die Oxidation stattfindet', 'Anode und Kathode behalten ihre Rollen', 'Es findet keine Redoxreaktion statt'], a: 1, e: 'Die Pole bleiben gleich, aber die Benennung folgt dem Vorgang: Oxidation ist immer an der Anode — beim Laden also am Pluspol.' }
+    ];
+    let qOrder = [], qPos = 0, qScore = 0, qSel = null;
+    function startQuiz() {
+        qOrder = QUIZ.map((_, i) => i).sort(() => Math.random() - .5);
+        qPos = 0; qScore = 0;
+        document.getElementById('quiz-total').textContent = qOrder.length;
+        document.getElementById('quiz-start-screen').classList.add('hidden');
+        document.getElementById('quiz-end-screen').classList.add('hidden');
+        document.getElementById('quiz-game-screen').classList.remove('hidden');
+        showQuizQuestion();
+    }
+    function showQuizQuestion() {
+        qSel = null;
+        const q = QUIZ[qOrder[qPos]];
+        document.getElementById('quiz-progress').textContent = qPos + ' / ' + qOrder.length;
+        document.getElementById('quiz-question').textContent = q.q;
+        document.getElementById('quiz-options').innerHTML = q.o.map((o, i) => `<button class="quiz-option btn-tap btn-hover" onclick="selectQuizAnswer(${i})">${o}</button>`).join('');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-next-btn').classList.add('hidden');
+    }
+    function selectQuizAnswer(i) {
+        if (qSel !== null) return;
+        qSel = i;
+        const q = QUIZ[qOrder[qPos]];
+        document.querySelectorAll('#quiz-options button').forEach((b, idx) => {
+            b.disabled = true;
+            if (idx === q.a) b.classList.add('correct'); else if (idx === i) b.classList.add('wrong');
+        });
+        if (i === q.a) qScore++;
+        const f = document.getElementById('quiz-feedback');
+        f.classList.remove('hidden');
+        f.className = 'p-4 rounded-xl font-medium mb-4 reveal-anim ' + (i === q.a ? 'bg-light text-[#2f6137] border border-[#dfeae3]' : 'bg-red-50 text-red-900 border border-red-200');
+        f.innerHTML = `<p class="font-bold mb-1">${i === q.a ? 'Richtig!' : 'Leider falsch.'}</p><p class="text-sm">${q.e}</p>`;
+        document.getElementById('quiz-next-btn').classList.remove('hidden');
+    }
+    function nextQuizQuestion() {
+        qPos++;
+        if (qPos < qOrder.length) { showQuizQuestion(); return; }
+        document.getElementById('quiz-game-screen').classList.add('hidden');
+        document.getElementById('quiz-end-screen').classList.remove('hidden');
+        document.getElementById('quiz-score').textContent = qScore;
+        document.getElementById('quiz-progress').textContent = qOrder.length + ' / ' + qOrder.length;
+        const r = qScore / qOrder.length;
+        document.getElementById('quiz-verdict').textContent =
+            r === 1 ? 'Perfekt — das sitzt!' : r >= .8 ? 'Sehr gut. Schau dir nur die verpassten Fragen noch einmal an.'
+            : r >= .5 ? 'Solide Grundlage. Wiederhole die Themen, bei denen du danebenlagst.'
+            : 'Geh die Reiter noch einmal in Ruhe durch und versuche es dann erneut.';
+        setDone('quiz', true);
+    }
+
+    // ================== GLOSSAR ==================
+    const GLOSSAR = [
+        { de: 'Galvanische Zelle', en: 'galvanic cell', d: 'Anordnung, die eine freiwillig ablaufende Redoxreaktion durch räumliche Trennung von Oxidation und Reduktion als Spannungsquelle nutzbar macht.' },
+        { de: 'Halbzelle', en: 'half-cell', d: 'Eine der beiden Teilzellen; enthält eine Elektrode in einer Elektrolytlösung und entspricht einem korrespondierenden Redoxpaar.' },
+        { de: 'Elektrode', en: 'electrode', d: 'Elektronenleiter (Metall oder Graphit), der in eine Elektrolytlösung taucht.' },
+        { de: 'Anode', en: 'anode', d: 'Elektrode, an der die Oxidation stattfindet. Bei der galvanischen Zelle der Minuspol, beim Laden eines Akkus der Pluspol.' },
+        { de: 'Kathode', en: 'cathode', d: 'Elektrode, an der die Reduktion stattfindet. Bei der galvanischen Zelle der Pluspol.' },
+        { de: 'Diaphragma', en: 'diaphragm', d: 'Poröse Trennwand zwischen den Halbzellen. Sie verhindert die rasche Durchmischung der Lösungen, lässt aber Ionen zum Ladungsausgleich hindurch.' },
+        { de: 'Salzbrücke', en: 'salt bridge', d: 'Alternative zum Diaphragma: ein mit Elektrolytlösung getränkter Streifen oder ein U-Rohr, das die Halbzellen leitend verbindet.' },
+        { de: 'Lösungstension', en: 'solution pressure', d: 'Die Fähigkeit eines Metalls, in wässriger Lösung Ionen zu bilden. Sie ist von Metall zu Metall verschieden.' },
+        { de: 'Elektrochemische Doppelschicht', en: 'electrochemical double layer', d: 'Grenzschicht zwischen Metall und Lösung, an der sich elektrisch verschieden geladene Schichten gegenüberstehen.' },
+        { de: 'Redoxpotenzial', en: 'redox potential', d: 'Elektrisches Potenzial, das einem korrespondierenden Redoxpaar zugeordnet wird. Nur relativ zu einer Bezugshalbzelle messbar.' },
+        { de: 'Standard-Wasserstoff-Elektrode', en: 'standard hydrogen electrode', d: 'International festgelegte Bezugshalbzelle aus platiniertem Platin in Säure (pH 0), von Wasserstoff umspült. Ihr Potenzial ist definitionsgemäß 0 V.' },
+        { de: 'Standardpotenzial E⁰', en: 'standard potential', d: 'Spannung zwischen einer Halbzelle und der Standard-Wasserstoff-Halbzelle unter Standardbedingungen (25 °C, 1000 hPa, c = 1 mol/l).' },
+        { de: 'Elektrochemische Spannungsreihe', en: 'electrochemical series', d: 'Anordnung der Redoxpaare nach ihren Standardpotenzialen. Ermöglicht die Vorhersage, ob eine Redoxreaktion freiwillig abläuft.' },
+        { de: 'Bergab-Regel', en: 'downhill rule', d: 'Merkhilfe: Elektronen gehen vom in der Spannungsreihe höher stehenden Redoxpaar auf das weiter unten stehende über.' },
+        { de: 'Edles Metall', en: 'noble metal', d: 'Metall mit positivem Standardpotenzial. Es wird schwer oxidiert; seine Ionen sind starke Oxidationsmittel.' },
+        { de: 'Unedles Metall', en: 'base metal', d: 'Metall mit negativem Standardpotenzial. Es gibt leicht Elektronen ab und ist damit ein starkes Reduktionsmittel.' },
+        { de: 'Zellnotation', en: 'cell notation', d: 'Kurzschreibweise einer galvanischen Zelle: Anode | Anodenlösung ‖ Kathodenlösung | Kathode.' },
+        { de: 'Ableitelektrode', en: 'inert electrode', d: 'Chemisch wenig angreifbare Elektrode (meist Platin oder Graphit) für Halbzellen, deren reduzierte Form kein Metall ist.' },
+        { de: 'Leerlaufspannung', en: 'open-circuit voltage', d: 'Spannung, die bei sehr kleiner Stromstärke zwischen den Elektroden gemessen wird. Sie entspricht der Differenz der beiden Redoxpotenziale.' },
+        { de: 'Batterie', en: 'battery', d: 'Umgangssprachlich jede galvanische Zelle; fachlich mehrere in Reihe geschaltete Zellen zur Erhöhung der Spannung.' },
+        { de: 'Primärelement', en: 'primary cell', d: 'Galvanische Zelle, die nicht wieder aufgeladen werden kann, weil die Elektrodenreaktionen nicht umkehrbar sind.' },
+        { de: 'Sekundärelement', en: 'secondary cell', d: 'Wiederaufladbare galvanische Zelle (Akkumulator); die Elektrodenreaktionen sind umkehrbar.' },
+        { de: 'Akkumulator', en: 'rechargeable battery', d: 'Sekundärzelle. Beim Entladen läuft die Reaktion freiwillig ab, beim Laden wird sie durch eine äußere Spannung erzwungen.' },
+        { de: 'Nennspannung', en: 'nominal voltage', d: 'Mittlere Spannung an der Batterie während der Entladung mit niedriger Stromstärke.' },
+        { de: 'Spezifische Energie', en: 'specific energy', d: 'Quotient aus gespeicherter Energie und Masse, meist in Wh/kg. Entscheidend überall dort, wo der Speicher mitbewegt wird.' },
+        { de: 'Energiedichte', en: 'energy density', d: 'Quotient aus gespeicherter Energie und Volumen. Wird umgangssprachlich oft auch für die spezifische Energie verwendet.' },
+        { de: 'Sulfatierung', en: 'sulphation', d: 'Bildung grober, schwer rückverwandelbarer Blei(II)-sulfat-Kristalle bei tiefentladenem Bleiakku. Führt zu dauerhaftem Kapazitätsverlust.' },
+        { de: 'Elektrolyse', en: 'electrolysis', d: 'Durch eine äußere Spannung erzwungene Redoxreaktion. Beim Laden eines Akkus laufen die Vorgänge entsprechend ab.' }
+    ];
+    function renderGlossar() {
+        document.getElementById('glossarList').innerHTML = GLOSSAR.map(t => `
+            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm glossar-item" data-search="${(t.de + ' ' + t.en + ' ' + t.d).toLowerCase()}">
+                <h4 class="font-bold text-gray-800">${t.de} <span class="text-gray-400 font-normal text-sm">/ ${t.en}</span></h4>
+                <p class="text-sm text-gray-600 mt-1 leading-relaxed">${t.d}</p></div>`).join('');
+    }
+    function filterGlossar() {
+        const q = document.getElementById('glossarSearch').value.toLowerCase().trim();
+        let n = 0;
+        document.querySelectorAll('.glossar-item').forEach(el => {
+            const hit = el.dataset.search.includes(q);
+            el.style.display = hit ? 'block' : 'none'; if (hit) n++;
+        });
+        document.getElementById('glossarEmpty').classList.toggle('hidden', n > 0);
+    }
+    </script>
+</body>
+</html>

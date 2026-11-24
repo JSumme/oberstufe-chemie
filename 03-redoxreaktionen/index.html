@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EduApp: Redoxreaktionen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#3d7c47', secondary: '#8bb29c', light: '#dfeae3', accent: '#b6964a', bgcolor: '#f4f8f6' },
+                    borderRadius: { '3xl': '1.5rem', '4xl': '2rem' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f4f8f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease-out; }
+        .tab-content.active { display: block; }
+        .reveal-anim { animation: slideDownFade 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDownFade { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        .pop-anim { animation: popIn 0.3s ease-out; }
+        .btn-tap { transition: all 0.2s ease-in-out; }
+        .btn-tap:active { transform: scale(0.96); }
+        .btn-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%233d7c47" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position-x: 96%; background-position-y: center; padding-right: 2.25rem; max-width: 100%; transition: border-color 0.2s; }
+        select:focus { border-color: #8bb29c; }
+        .quiz-option { background-color: white; border: 2px solid #dfeae3; color: #3d7c47; padding: 1rem; border-radius: 1rem; font-weight: 600; text-align: left; transition: all 0.2s ease; display: flex; align-items: center; }
+        .quiz-option:disabled { cursor: default; transform: none !important; box-shadow: none !important; }
+        .quiz-option.correct { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
+        .quiz-option.wrong { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
+        details.hint-accordion summary::-webkit-details-marker { display:none; }
+        .formula { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+        .electron { animation: zap 1s ease-in-out infinite; }
+        @keyframes zap { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+        .oz-input { font-family: ui-monospace, Menlo, monospace; text-align:center; letter-spacing:.05em; }
+        .oz-input:focus { outline:none; border-color:#3d7c47; box-shadow:0 0 0 3px rgba(61,124,71,.15); }
+        .rule-card { transition: all .2s ease; }
+        .rule-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.06); }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden" onload="initApp()">
+
+    <!-- Header & Navigation -->
+    <header class="bg-primary text-white py-3 md:py-4 px-4 md:px-6 rounded-b-3xl shadow-lg z-50 flex-shrink-0">
+        <div class="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <h1 class="text-lg md:text-2xl font-bold flex items-center gap-2 overflow-hidden mr-1">
+                <i data-lucide="flask-conical" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i>
+                <span class="truncate hidden sm:inline">Redoxreaktionen</span>
+            </h1>
+            <nav class="flex gap-1.5 md:gap-2 flex-shrink-0">
+                <button onclick="switchTab('donator')" id="nav-donator" title="Oxidation & Reduktion" class="btn-tap btn-hover bg-white text-primary w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold shadow flex items-center justify-center flex-shrink-0"><i data-lucide="repeat" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('oxzahlen')" id="nav-oxzahlen" title="Oxidationszahlen" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="hash" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('gleichungen')" id="nav-gleichungen" title="Redoxgleichungen" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="split-square-horizontal" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('nebengruppe')" id="nav-nebengruppe" title="Mangan & Permanganat" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="beaker" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('analogie')" id="nav-analogie" title="Analogie zu Säure-Base" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="arrow-left-right" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('training')" id="nav-training" title="Training & Klausur" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="graduation-cap" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+                <button onclick="switchTab('glossar')" id="nav-glossar" title="Fachsprache & Glossar" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white w-10 h-10 md:w-12 md:h-12 rounded-2xl font-bold flex items-center justify-center flex-shrink-0"><i data-lucide="languages" class="w-5 h-5 md:w-6 md:h-6"></i></button>
+            </nav>
+        </div>
+    </header>
+
+    <main id="mainScrollArea" class="flex-grow overflow-y-auto p-4 md:p-6">
+        <div class="max-w-4xl mx-auto pb-24">
+
+            <!-- ============ TAB 1: OXIDATION & REDUKTION ============ -->
+            <div id="tab-donator" class="tab-content active">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Oxidation und Reduktion</h2>
+                    <p class="text-gray-600">Elektronenübertragung, Oxidations- und Reduktionsmittel, korrespondierende Redoxpaare und die Redoxreihe</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-don-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="book-open" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Elektronenübergänge</span>
+                        <i data-lucide="chevron-down" id="acc-don-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-don-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div class="bg-light text-[#2f6137] p-5 rounded-xl border-l-4 border-primary font-medium mb-5 mt-4">
+                            Als <strong>Oxidation</strong> bezeichnet man die Abgabe von Elektronen, als <strong>Reduktion</strong> die Aufnahme von Elektronen. Reaktionen, bei denen Elektronenübergänge stattfinden, werden als <strong>Redoxreaktionen</strong> bezeichnet.
+                        </div>
+                        <p class="text-gray-700 mb-4">Die Ähnlichkeit zweier Reaktionen zeigt sich besonders deutlich, wenn man sie in <strong>Teilschritten</strong> darstellt. Magnesium reagiert sowohl mit Sauerstoff als auch mit Brom nach demselben Muster:</p>
+                        <div class="grid md:grid-cols-2 gap-4 mb-5">
+                            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5">
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Magnesium + Sauerstoff</p>
+                                <div class="formula text-sm space-y-1">
+                                    <div class="flex gap-2"><span class="text-gray-400 w-6">(I)</span><span class="text-red-700 font-bold">Mg → Mg²⁺ + 2 e⁻</span><span class="text-gray-400 ml-auto">| ·2</span></div>
+                                    <div class="flex gap-2"><span class="text-gray-400 w-6">(II)</span><span class="text-blue-700 font-bold">O₂ + 4 e⁻ → 2 O²⁻</span></div>
+                                    <div class="border-t-2 border-gray-300 pt-1 mt-1 font-bold text-gray-800">2 Mg + O₂ → 2 MgO</div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5">
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Magnesium + Brom</p>
+                                <div class="formula text-sm space-y-1">
+                                    <div class="flex gap-2"><span class="text-gray-400 w-6">(I)</span><span class="text-red-700 font-bold">Mg → Mg²⁺ + 2 e⁻</span></div>
+                                    <div class="flex gap-2"><span class="text-gray-400 w-6">(II)</span><span class="text-blue-700 font-bold">Br₂ + 2 e⁻ → 2 Br⁻</span></div>
+                                    <div class="border-t-2 border-gray-300 pt-1 mt-1 font-bold text-gray-800">Mg + Br₂ → MgBr₂</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-5">
+                                <h4 class="font-bold text-red-800 mb-2 flex items-center gap-2"><i data-lucide="upload" class="w-5 h-5"></i> Oxidation</h4>
+                                <p class="text-sm text-red-900">Elektronen<strong>abgabe</strong>. Die Magnesium-Atome wirken als <strong>Elektronendonatoren</strong> — sie geben ihre Außenelektronen ab.</p>
+                            </div>
+                            <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5">
+                                <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2"><i data-lucide="download" class="w-5 h-5"></i> Reduktion</h4>
+                                <p class="text-sm text-blue-900">Elektronen<strong>aufnahme</strong>. Die Nichtmetall-Atome wirken als <strong>Elektronenakzeptoren</strong> und werden zu Anionen.</p>
+                            </div>
+                        </div>
+                        <p class="text-gray-700 mt-4 text-sm">In einer chemischen Reaktion kann ein Teilchen nur dann Elektronen abgeben, wenn diese von anderen Teilchen aufgenommen werden. Folglich ist eine Oxidation <strong>immer</strong> mit einer Reduktion gekoppelt — und umgekehrt.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-don-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="arrow-left-right" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Oxidationsmittel & Reduktionsmittel</span>
+                        <i data-lucide="chevron-down" id="acc-don-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-don-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div class="grid md:grid-cols-2 gap-4 mb-5 mt-4">
+                            <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5">
+                                <h4 class="font-bold text-blue-800 mb-2">Oxidationsmittel</h4>
+                                <p class="text-sm text-blue-900 mb-3">Ein Teilchen, das Elektronen <strong>aufnimmt</strong> (Elektronen<em>akzeptor</em>), <strong>oxidiert</strong> seinen Reaktionspartner.</p>
+                                <p class="text-sm font-bold text-blue-900 bg-white p-2.5 rounded-lg text-center">Ein Oxidationsmittel wird selbst <span class="underline">reduziert</span>.</p>
+                            </div>
+                            <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-5">
+                                <h4 class="font-bold text-red-800 mb-2">Reduktionsmittel</h4>
+                                <p class="text-sm text-red-900 mb-3">Ein Teilchen, das Elektronen <strong>abgibt</strong> (Elektronen<em>donator</em>), <strong>reduziert</strong> seinen Reaktionspartner.</p>
+                                <p class="text-sm font-bold text-red-900 bg-white p-2.5 rounded-lg text-center">Ein Reduktionsmittel wird selbst <span class="underline">oxidiert</span>.</p>
+                            </div>
+                        </div>
+                        <div class="bg-light border-l-4 border-primary p-4 rounded-xl text-[#2f6137] font-medium text-sm mb-5">
+                            <i data-lucide="alert-circle" class="inline w-4 h-4 mr-1"></i> Häufige Fehlerquelle: Das Oxidationsmittel <em>bewirkt</em> die Oxidation des Partners — es wird also selbst reduziert. Nicht verwechseln!
+                        </div>
+                        <h4 class="font-bold text-gray-800 mb-3">Übung: Wer ist Oxidations-, wer Reduktionsmittel?</h4>
+                        <div id="omRmTrainerArea"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-don-3')">
+                        <span class="flex items-center gap-3"><i data-lucide="link-2" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Korrespondierende Redoxpaare</span>
+                        <i data-lucide="chevron-down" id="acc-don-3-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-don-3-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Elektronenabgabe und Elektronenaufnahme sind <strong>umkehrbare</strong> Vorgänge. Ein Reduktionsmittel wird durch Elektronenabgabe zum korrespondierenden Oxidationsmittel — und umgekehrt. Beide bilden ein <strong>korrespondierendes Redoxpaar</strong>.</p>
+                        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200 mb-5 overflow-x-auto">
+                            <svg viewBox="0 0 780 175" class="w-full min-w-[560px] h-auto">
+                                <path d="M 95,62 L 95,42 L 190,42" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <text x="300" y="47" fill="#ef4444" font-size="13" font-weight="bold" text-anchor="middle">korrespondierend</text>
+                                <path d="M 410,42 L 505,42 L 505,62" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <rect x="45" y="72" width="100" height="46" rx="10" fill="#fee2e2"/>
+                                <text x="95" y="102" fill="#b91c1c" font-size="24" font-weight="bold" text-anchor="middle">Red1</text>
+                                <text x="192" y="102" fill="#9ca3af" font-size="24" font-weight="bold" text-anchor="middle">+</text>
+                                <rect x="240" y="72" width="100" height="46" rx="10" fill="#dbeafe"/>
+                                <text x="290" y="102" fill="#1d4ed8" font-size="24" font-weight="bold" text-anchor="middle">Ox2</text>
+                                <text x="378" y="102" fill="#1f2937" font-size="24" font-weight="bold" text-anchor="middle">⇌</text>
+                                <rect x="415" y="72" width="100" height="46" rx="10" fill="#fee2e2"/>
+                                <text x="465" y="102" fill="#b91c1c" font-size="24" font-weight="bold" text-anchor="middle">Ox1</text>
+                                <text x="552" y="102" fill="#9ca3af" font-size="24" font-weight="bold" text-anchor="middle">+</text>
+                                <rect x="590" y="72" width="105" height="46" rx="10" fill="#dbeafe"/>
+                                <text x="642" y="102" fill="#1d4ed8" font-size="24" font-weight="bold" text-anchor="middle">Red2</text>
+                                <path d="M 290,128 L 290,148 L 385,148" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <text x="495" y="153" fill="#3b82f6" font-size="13" font-weight="bold" text-anchor="middle">korrespondierend</text>
+                                <path d="M 600,148 L 642,148 L 642,128" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <p class="text-center font-bold text-primary mb-5">An jeder Redoxreaktion sind stets <strong>zwei</strong> korrespondierende Redoxpaare beteiligt.</p>
+                        <div class="overflow-x-auto rounded-xl border border-gray-200">
+                            <table class="w-full text-left border-collapse min-w-[460px] text-sm">
+                                <thead><tr class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
+                                    <th class="p-3 font-bold">Red</th><th class="p-3 font-bold text-center">⇌</th><th class="p-3 font-bold">Ox + z e⁻</th><th class="p-3 font-bold">kurz: Red/Ox</th>
+                                </tr></thead>
+                                <tbody class="formula">
+                                    <tr class="border-b border-gray-100"><td class="p-3 font-bold">Ag</td><td class="p-3 text-center text-gray-400">⇌</td><td class="p-3">Ag⁺ + e⁻</td><td class="p-3 text-primary font-bold">Ag/Ag⁺</td></tr>
+                                    <tr class="border-b border-gray-100 bg-gray-50"><td class="p-3 font-bold">Cu</td><td class="p-3 text-center text-gray-400">⇌</td><td class="p-3">Cu²⁺ + 2 e⁻</td><td class="p-3 text-primary font-bold">Cu/Cu²⁺</td></tr>
+                                    <tr class="border-b border-gray-100"><td class="p-3 font-bold">2 Cl⁻</td><td class="p-3 text-center text-gray-400">⇌</td><td class="p-3">Cl₂ + 2 e⁻</td><td class="p-3 text-primary font-bold">Cl⁻/Cl₂</td></tr>
+                                    <tr class="bg-gray-50"><td class="p-3 font-bold">2 O²⁻</td><td class="p-3 text-center text-gray-400">⇌</td><td class="p-3">O₂ + 4 e⁻</td><td class="p-3 text-primary font-bold">O²⁻/O₂</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Das Symbol <span class="formula font-bold">z</span> steht für die Anzahl der Elektronen, die abgegeben bzw. aufgenommen werden.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-don-4')">
+                        <span class="flex items-center gap-3"><i data-lucide="list-ordered" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Die Redoxreihe</span>
+                        <i data-lucide="chevron-down" id="acc-don-4-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-don-4-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-5 mt-4">Die Fähigkeit zur Elektronenabgabe — das <strong>Reduktionsvermögen</strong> — ist je Metall unterschiedlich. Prüft man mehrere Metalle systematisch gegen verschiedene Salzlösungen, lassen sich die Metalle in einer <strong>Redoxreihe</strong> anordnen.</p>
+                        <div id="redoxreiheArea" class="mb-5"></div>
+                        <div class="space-y-3">
+                            <p class="bg-light text-[#2f6137] p-4 rounded-xl border-l-4 border-primary font-bold text-sm">Ein Metall-Atom kann die Ionen des in der Redoxreihe <span class="underline">unter ihm</span> stehenden Metalls reduzieren.</p>
+                            <p class="bg-light text-[#2f6137] p-4 rounded-xl border-l-4 border-primary font-bold text-sm">Ein Nichtmetall-Ion kann die Atome des in der Redoxreihe <span class="underline">unter ihm</span> stehenden Nichtmetall-Moleküls reduzieren.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-don-5')">
+                        <span class="flex items-center gap-3"><i data-lucide="zap" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Redoxpaar-Simulator</span>
+                        <i data-lucide="chevron-down" id="acc-don-5-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-don-5-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-600 text-sm mb-4 mt-4">Sage zuerst selbst voraus, ob eine Reaktion abläuft — prüfe dann mit der Redoxreihe.</p>
+                        <div id="metalSimContainer"></div>
+                    </div>
+                </div>
+
+                <div class="bg-light border border-[#dfeae3] rounded-2xl p-5 md:p-6 text-center max-w-xl mx-auto my-6 shadow-inner">
+                    <h4 class="font-bold text-primary mb-2 flex items-center justify-center gap-2"><i data-lucide="target" class="w-5 h-5"></i> Mini-Quiz: Donator oder Akzeptor?</h4>
+                    <div id="donAkzQuizArea"></div>
+                </div>
+            </div>
+
+            <!-- ============ TAB 2: OXIDATIONSZAHLEN ============ -->
+            <div id="tab-oxzahlen" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Oxidationszahlen</h2>
+                    <p class="text-gray-600">Das Modell zur Beschreibung von Elektronenübergängen — anorganisch und organisch</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-oz-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="list-checks" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Die fünf Regeln</span>
+                        <i data-lucide="chevron-down" id="acc-oz-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-oz-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl mb-5 mt-4">
+                            <p class="text-amber-900 font-bold text-sm flex items-start gap-2"><i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i> <span>Die Regeln stehen in <strong>Prioritätsreihenfolge</strong>: Regeln mit niedrigerer Nummer haben Vorrang. Genau daraus ergeben sich alle „Ausnahmen".</span></p>
+                        </div>
+                        <div id="ozRulesArea" class="grid md:grid-cols-2 gap-4 mb-6"></div>
+                        <h4 class="font-bold text-gray-800 mb-3">Vorgehen am Beispiel Schwefelsäure (H₂SO₄)</h4>
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5">
+                            <div class="space-y-2 text-sm formula">
+                                <div class="flex justify-between items-center bg-white p-2.5 rounded-lg"><span>2 Wasserstoff-Atome, OZ(H) = +I</span><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Regel 4</span></div>
+                                <div class="flex justify-between items-center bg-white p-2.5 rounded-lg"><span>4 Sauerstoff-Atome, OZ(O) = −II</span><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Regel 5</span></div>
+                                <div class="flex justify-between items-center bg-white p-2.5 rounded-lg"><span>1 Schwefel-Atom → über die Summenregel</span><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Regel 1</span></div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-gray-300 formula text-sm space-y-1 text-gray-800">
+                                <p>2 · OZ(H) + 1 · OZ(S) + 4 · OZ(O) = 0</p>
+                                <p>OZ(S) = −2 · OZ(H) − 4 · OZ(O)</p>
+                                <p>OZ(S) = −2 · (+I) − 4 · (−II)</p>
+                                <p class="font-bold text-primary text-base">OZ(S) = +VI</p>
+                            </div>
+                            <div class="mt-4 text-center bg-white border-2 border-primary rounded-xl py-3">
+                                <span class="formula font-bold text-lg">
+                                    <span class="text-red-600 text-xs align-super">+I</span>H₂<span class="text-red-600 text-xs align-super">+VI</span>S<span class="text-red-600 text-xs align-super">−II</span>O₄
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-oz-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="pen-tool" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> OZ-Trainer (selbst rechnen)</span>
+                        <i data-lucide="chevron-down" id="acc-oz-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-oz-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div id="ozTrainerContainer" class="mt-4"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-oz-3')">
+                        <span class="flex items-center gap-3"><i data-lucide="hexagon" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Organische Verbindungen: Strukturformel & EN</span>
+                        <i data-lucide="chevron-down" id="acc-oz-3-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-oz-3-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">Organische Moleküle haben mehrere C-Atome mit unterschiedlicher Umgebung. Die Oxidationszahl wird deshalb <strong>pro C-Atom</strong> bestimmt: Man betrachtet jede Bindung einzeln und teilt das bindende Elektronenpaar dem <strong>elektronegativeren</strong> Partner zu.</p>
+                        <div class="grid grid-cols-3 md:grid-cols-6 gap-2 mb-5">
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-center"><p class="formula font-bold text-gray-800">H</p><p class="text-xs text-gray-500">EN 2,20</p></div>
+                            <div class="bg-primary/10 border-2 border-primary rounded-xl p-2.5 text-center"><p class="formula font-bold text-primary">C</p><p class="text-xs text-primary font-bold">EN 2,55</p></div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-center"><p class="formula font-bold text-gray-800">N</p><p class="text-xs text-gray-500">EN 3,04</p></div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-center"><p class="formula font-bold text-gray-800">Cl</p><p class="text-xs text-gray-500">EN 3,16</p></div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-center"><p class="formula font-bold text-gray-800">O</p><p class="text-xs text-gray-500">EN 3,44</p></div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-center"><p class="formula font-bold text-gray-800">F</p><p class="text-xs text-gray-500">EN 3,98</p></div>
+                        </div>
+                        <div class="overflow-x-auto mb-6">
+                            <table class="w-full text-left border-collapse min-w-[480px] text-sm">
+                                <thead><tr class="bg-gray-100 text-gray-700 border-b-2 border-gray-300"><th class="p-3 font-bold">Bindung</th><th class="p-3 font-bold">Beitrag zur OZ des C-Atoms</th><th class="p-3 font-bold">Begründung über die EN</th></tr></thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-100"><td class="p-3 formula font-bold">C–H</td><td class="p-3 font-bold text-red-600">−1 pro Bindung</td><td class="p-3">EN(C) 2,55 &gt; EN(H) 2,20 → C bekommt das Elektronenpaar</td></tr>
+                                    <tr class="border-b border-gray-100 bg-gray-50"><td class="p-3 formula font-bold">C–O, C–N, C–Hal</td><td class="p-3 font-bold text-blue-600">+1 pro Bindung</td><td class="p-3">Partner elektronegativer als C → C verliert das Elektronenpaar</td></tr>
+                                    <tr class="border-b border-gray-100"><td class="p-3 formula font-bold">C–C</td><td class="p-3 font-bold text-gray-700">0</td><td class="p-3">gleiche EN → Elektronenpaar wird geteilt</td></tr>
+                                    <tr><td class="p-3 formula font-bold">C=O</td><td class="p-3 font-bold text-blue-600">+2 (zählt doppelt)</td><td class="p-3">zwei Bindungen zum selben elektronegativeren Partner</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <h4 class="font-bold text-gray-800 mb-3">Strukturformel-Analyse</h4>
+                        <div id="organicAnalyzerContainer"></div>
+                    </div>
+                </div>
+
+                <div class="bg-light border border-[#dfeae3] rounded-2xl p-5 md:p-6 text-center max-w-xl mx-auto my-6 shadow-inner">
+                    <h4 class="font-bold text-primary mb-2 flex items-center justify-center gap-2"><i data-lucide="target" class="w-5 h-5"></i> Mini-Quiz: Redoxreaktion oder nicht?</h4>
+                    <div id="redoxJaNeinQuizArea"></div>
+                </div>
+            </div>
+
+            <!-- ============ TAB 3: REDOXGLEICHUNGEN ============ -->
+            <div id="tab-gleichungen" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Aufstellen einer Redoxgleichung</h2>
+                    <p class="text-gray-600">Das systematische 3-Schritte-Verfahren im sauren und im alkalischen Milieu</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-gl-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="list-ordered" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Das Verfahren am Beispiel</span>
+                        <i data-lucide="chevron-down" id="acc-gl-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-gl-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div class="bg-light border-l-4 border-primary p-4 rounded-xl mb-6 mt-4">
+                            <p class="text-[#2f6137] font-bold text-sm mb-1">Ausgangssituation</p>
+                            <p class="text-[#2f6137] text-sm">Sulfit-Ionen (SO₃²⁻) reagieren in saurer wässriger Lösung mit Permanganat-Ionen (MnO₄⁻) zu Sulfat-Ionen (SO₄²⁻) und Mangan(II)-Ionen (Mn²⁺).</p>
+                        </div>
+
+                        <!-- Schritt 1 -->
+                        <div class="mb-6">
+                            <div class="flex items-start gap-3 mb-3">
+                                <span class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white font-bold flex items-center justify-center">1</span>
+                                <div><h4 class="font-bold text-gray-800">Teilchenformeln der Ausgangs- und Endstoffe schreiben</h4>
+                                <p class="text-sm text-gray-600">Oxidationszahlen bestimmen und die Begriffe <span class="text-red-600 font-bold">Oxidation</span> (Erhöhung der OZ) und <span class="text-blue-600 font-bold">Reduktion</span> (Erniedrigung der OZ) zuordnen.</p></div>
+                            </div>
+                            <div class="ml-11 bg-gray-50 border border-gray-200 rounded-2xl p-4 overflow-x-auto">
+                                <svg viewBox="0 0 560 150" class="w-full min-w-[430px] h-auto">
+                                    <path d="M 60,58 L 60,32 L 250,32" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M 250,32 L 400,32 L 400,58" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+                                    <polygon points="400,62 396,52 404,52" fill="#dc2626"/>
+                                    <text x="325" y="26" fill="#dc2626" font-size="13" font-weight="bold" text-anchor="middle">Oxidation</text>
+                                    <text x="60" y="66" fill="#dc2626" font-size="11" font-weight="bold" text-anchor="middle">+IV</text>
+                                    <text x="60" y="90" fill="#1f2937" font-size="19" font-weight="bold" text-anchor="middle" font-family="monospace">SO₃²⁻</text>
+                                    <text x="140" y="90" fill="#9ca3af" font-size="17" text-anchor="middle">+</text>
+                                    <text x="220" y="66" fill="#1d4ed8" font-size="11" font-weight="bold" text-anchor="middle">+VII −II</text>
+                                    <text x="220" y="90" fill="#1f2937" font-size="19" font-weight="bold" text-anchor="middle" font-family="monospace">MnO₄⁻</text>
+                                    <text x="300" y="90" fill="#1f2937" font-size="19" text-anchor="middle">→</text>
+                                    <text x="400" y="66" fill="#dc2626" font-size="11" font-weight="bold" text-anchor="middle">+VI</text>
+                                    <text x="400" y="90" fill="#1f2937" font-size="19" font-weight="bold" text-anchor="middle" font-family="monospace">SO₄²⁻</text>
+                                    <text x="470" y="90" fill="#9ca3af" font-size="17" text-anchor="middle">+</text>
+                                    <text x="527" y="66" fill="#1d4ed8" font-size="11" font-weight="bold" text-anchor="middle">+II</text>
+                                    <text x="527" y="90" fill="#1f2937" font-size="19" font-weight="bold" text-anchor="middle" font-family="monospace">Mn²⁺</text>
+                                    <path d="M 220,104 L 220,130 L 380,130" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M 380,130 L 527,130 L 527,104" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round"/>
+                                    <polygon points="527,100 523,110 531,110" fill="#1d4ed8"/>
+                                    <text x="330" y="145" fill="#1d4ed8" font-size="13" font-weight="bold" text-anchor="middle">Reduktion</text>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Schritt 2 -->
+                        <div class="mb-6">
+                            <div class="flex items-start gap-3 mb-3">
+                                <span class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white font-bold flex items-center justify-center">2</span>
+                                <div><h4 class="font-bold text-gray-800">Teilgleichungen schreiben und Elektronenanzahlen ausgleichen</h4>
+                                <p class="text-sm text-gray-600">a) Redoxpaar mit Oxidationszahlen · b) Änderung der OZ durch Elektronen ausgleichen · c) mit dem <strong>kleinstmöglichen</strong> Faktor multiplizieren, bis abgegebene = aufgenommene Elektronenzahl.</p></div>
+                            </div>
+                            <div class="ml-11 grid md:grid-cols-2 gap-3">
+                                <div class="bg-red-50 border border-red-200 rounded-2xl p-4">
+                                    <p class="text-xs font-bold text-red-700 uppercase tracking-wider mb-2">Oxidation</p>
+                                    <div class="formula text-sm space-y-1.5 text-red-900">
+                                        <p><span class="text-gray-400">a)</span> SO₃²⁻ → SO₄²⁻</p>
+                                        <p><span class="text-gray-400">b)</span> SO₃²⁻ → SO₄²⁻ + 2 e⁻</p>
+                                        <p class="font-bold"><span class="text-gray-400">c)</span> <span class="bg-red-200 px-1 rounded">·5</span> 5 SO₃²⁻ → 5 SO₄²⁻ + 10 e⁻</p>
+                                    </div>
+                                </div>
+                                <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                                    <p class="text-xs font-bold text-blue-700 uppercase tracking-wider mb-2">Reduktion</p>
+                                    <div class="formula text-sm space-y-1.5 text-blue-900">
+                                        <p><span class="text-gray-400">a)</span> MnO₄⁻ → Mn²⁺</p>
+                                        <p><span class="text-gray-400">b)</span> MnO₄⁻ + 5 e⁻ → Mn²⁺</p>
+                                        <p class="font-bold"><span class="text-gray-400">c)</span> <span class="bg-blue-200 px-1 rounded">·2</span> 2 MnO₄⁻ + 10 e⁻ → 2 Mn²⁺</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="ml-11 mt-2 text-xs text-gray-500">kgV von 2 und 5 ist <strong>10</strong> → Faktoren 5 bzw. 2.</p>
+                        </div>
+
+                        <!-- Schritt 3 -->
+                        <div class="mb-2">
+                            <div class="flex items-start gap-3 mb-3">
+                                <span class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white font-bold flex items-center justify-center">3</span>
+                                <div><h4 class="font-bold text-gray-800">Redoxgleichung schreiben</h4></div>
+                            </div>
+                            <div class="ml-11 space-y-3">
+                                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                                    <p class="text-sm font-bold text-gray-700 mb-2"><span class="text-primary">a)</span> Die beiden Teilgleichungen zusammenführen</p>
+                                    <p class="text-xs text-gray-500 mb-2">Die 10 Elektronen kürzen sich auf beiden Seiten weg.</p>
+                                    <p class="formula font-bold text-center bg-white p-3 rounded-lg border border-gray-200 text-sm md:text-base">5 SO₃²⁻ + 2 MnO₄⁻ → 5 SO₄²⁻ + 2 Mn²⁺</p>
+                                </div>
+                                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                                    <p class="text-sm font-bold text-gray-700 mb-2"><span class="text-primary">b)</span> Elementarladungen ausgleichen — mit <span class="formula text-red-700">H₃O⁺</span> (saure Lösung)</p>
+                                    <p class="text-xs text-gray-500 mb-2">Ladung links: 5·(−2) + 2·(−1) = <strong>−12</strong> · Ladung rechts: 5·(−2) + 2·(+2) = <strong>−6</strong> → 6 H₃O⁺ nach links.</p>
+                                    <p class="formula font-bold text-center bg-white p-3 rounded-lg border border-gray-200 text-sm md:text-base">5 SO₃²⁻ + 2 MnO₄⁻ + <span class="text-red-700">6 H₃O⁺</span> → 5 SO₄²⁻ + 2 Mn²⁺</p>
+                                </div>
+                                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                                    <p class="text-sm font-bold text-gray-700 mb-2"><span class="text-primary">c)</span> Atombilanzen mit <span class="formula text-blue-700">H₂O</span> ausgleichen</p>
+                                    <p class="text-xs text-gray-500 mb-2">Die 6 H₃O⁺ liefern links 18 H- und 6 zusätzliche O-Atome; diese erscheinen rechts als 9 H₂O.</p>
+                                    <p class="formula font-bold text-center bg-white p-3 rounded-lg border-2 border-primary text-primary text-sm md:text-base">5 SO₃²⁻ + 2 MnO₄⁻ + 6 H₃O⁺ → 5 SO₄²⁻ + 2 Mn²⁺ + <span class="text-blue-700">9 H₂O</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-4 mt-6">
+                            <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-4 text-center">
+                                <h4 class="font-bold text-red-800 mb-1 text-sm">Saure Lösung</h4>
+                                <p class="text-xs text-red-900">Ladungsausgleich mit <strong class="formula">H₃O⁺</strong> — nicht mit „nacktem" H⁺, denn H₃O⁺ ist die tatsächlich in Wasser vorliegende Teilchenform.</p>
+                            </div>
+                            <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 text-center">
+                                <h4 class="font-bold text-blue-800 mb-1 text-sm">Alkalische Lösung</h4>
+                                <p class="text-xs text-blue-900">Ladungsausgleich mit <strong class="formula">OH⁻</strong>. Die Schritte 1, 2 und 3a/3c bleiben unverändert — nur 3b ändert sich.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-gl-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="wand-2" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Schritt-für-Schritt-Trainer</span>
+                        <i data-lucide="chevron-down" id="acc-gl-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-gl-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-600 text-sm mb-4 mt-4">Vergleiche dasselbe Redoxpaar in beiden Milieus. Decke jeden Schritt erst auf, wenn du ihn selbst notiert hast.</p>
+                        <div id="glTrainerContainer"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-gl-3')">
+                        <span class="flex items-center gap-3"><i data-lucide="search-x" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Fehler finden</span>
+                        <i data-lucide="chevron-down" id="acc-gl-3-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-gl-3-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mb-4 mt-4">In jeder dieser Gleichungen steckt genau <strong>ein</strong> Fehler. Finde ihn, bevor du die Lösung aufdeckst.</p>
+                        <div id="fehlerContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ TAB 4: MANGAN / PERMANGANAT ============ -->
+            <div id="tab-nebengruppe" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Mangan: ein Element, viele Oxidationsstufen</h2>
+                    <p class="text-gray-600">Warum dasselbe Ausgangsion je nach Milieu zu verschiedenen Produkten reagiert</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-mn-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="layers" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Die Oxidationsstufen des Mangans</span>
+                        <i data-lucide="chevron-down" id="acc-mn-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-mn-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mt-4 mb-5">Die Atome vieler Elemente können <strong>unterschiedliche Oxidationszahlen</strong> annehmen. Besonders ausgeprägt ist das bei Mangan: Es tritt in mehreren stabilen Oxidationsstufen auf, die sich auch farblich deutlich unterscheiden. Ein Hauptgruppenmetall wie Magnesium bildet dagegen praktisch nur <strong>eine</strong> Oxidationsstufe (+II).</p>
+                        <div id="mnLadderContainer"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-mn-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="git-compare" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Gleiches Ion, anderes Produkt</span>
+                        <i data-lucide="chevron-down" id="acc-mn-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-mn-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mt-4 mb-5">Weil Mangan mehrere Oxidationsstufen einnehmen kann, hängt das Reaktionsprodukt vom <strong>Milieu</strong> ab. Das Permanganat-Ion wird in saurer Lösung viel weiter reduziert als in alkalischer:</p>
+                        <div class="grid md:grid-cols-2 gap-4 mb-5">
+                            <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-5 text-center">
+                                <p class="text-xs font-bold text-red-700 uppercase tracking-wider mb-3">In saurer Lösung</p>
+                                <div class="flex items-center justify-center gap-3 mb-3">
+                                    <div class="w-10 h-10 rounded-full border-2 border-white shadow" style="background:#8b1a8b"></div>
+                                    <i data-lucide="arrow-right" class="w-5 h-5 text-gray-400"></i>
+                                    <div class="w-10 h-10 rounded-full border-2 border-gray-200 shadow" style="background:#f2ece6"></div>
+                                </div>
+                                <p class="formula font-bold text-red-900">MnO₄⁻ → Mn²⁺</p>
+                                <p class="text-sm text-red-800 mt-1">+VII → +II · Aufnahme von <strong>5 e⁻</strong></p>
+                                <p class="text-xs text-gray-600 mt-2">violett → nahezu farblos</p>
+                            </div>
+                            <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5 text-center">
+                                <p class="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">In stark alkalischer Lösung</p>
+                                <div class="flex items-center justify-center gap-3 mb-3">
+                                    <div class="w-10 h-10 rounded-full border-2 border-white shadow" style="background:#8b1a8b"></div>
+                                    <i data-lucide="arrow-right" class="w-5 h-5 text-gray-400"></i>
+                                    <div class="w-10 h-10 rounded-full border-2 border-white shadow" style="background:#2e7d32"></div>
+                                </div>
+                                <p class="formula font-bold text-blue-900">MnO₄⁻ → MnO₄²⁻</p>
+                                <p class="text-sm text-blue-800 mt-1">+VII → +VI · Aufnahme von <strong>1 e⁻</strong></p>
+                                <p class="text-xs text-gray-600 mt-2">violett → grün</p>
+                            </div>
+                        </div>
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl mb-3 flex items-start gap-3">
+                            <div class="w-9 h-9 rounded-full flex-shrink-0 border-2 border-white shadow" style="background:#6d4c2c"></div>
+                            <p class="text-amber-900 text-sm">In <strong>neutraler bis schwach alkalischer</strong> Lösung wird Permanganat meist nur bis zum braunen <strong>Braunstein</strong> reduziert: <span class="formula font-bold">MnO₄⁻ → MnO₂</span> (+VII → +IV, 3 e⁻). Achte in Aufgabentexten auf Hinweise wie „brauner Niederschlag".</p>
+                        </div>
+                        <div class="bg-light border-l-4 border-primary p-4 rounded-xl">
+                            <p class="text-[#2f6137] text-sm font-medium">Deshalb muss beim Aufstellen einer Redoxgleichung <strong>immer zuerst geklärt werden, in welchem Milieu die Reaktion abläuft</strong> — sonst stimmen weder die Produkte noch die Elektronenbilanz.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-mn-3')">
+                        <span class="flex items-center gap-3"><i data-lucide="droplets" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Permanganat und Eisen(II) in saurer Lösung</span>
+                        <i data-lucide="chevron-down" id="acc-mn-3-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-mn-3-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mt-4 mb-4">Eisen(II)-Ionen werden von Permanganat-Ionen zu Eisen(III)-Ionen oxidiert. Auch hier gilt genau das Verfahren aus dem vorigen Reiter — hier vollständig durchgerechnet:</p>
+                        <div id="mnFeDerivation"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ TAB 5: ANALOGIE ============ -->
+            <div id="tab-analogie" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Analogie: Redox ↔ Säure-Base</h2>
+                    <p class="text-gray-600">Dieselbe Struktur, ein anderes übertragenes Teilchen</p>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-an-1')">
+                        <span class="flex items-center gap-3"><i data-lucide="table-2" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Vergleich der beiden Konzepte</span>
+                        <i data-lucide="chevron-down" id="acc-an-1-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-an-1-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <p class="text-gray-700 mt-4 mb-5">Beide Reaktionstypen sind <strong>Donator-Akzeptor-Reaktionen</strong>. Vergleiche die allgemeinen Schemata — sie sind strukturgleich:</p>
+                        <div class="grid md:grid-cols-2 gap-4 mb-6">
+                            <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-5 text-center">
+                                <p class="text-xs font-bold text-red-700 uppercase tracking-wider mb-3">Redoxreaktion</p>
+                                <p class="formula font-bold text-red-900 text-sm md:text-base">Red1 + Ox2 ⇌ Ox1 + Red2</p>
+                                <p class="text-xs text-red-800 mt-2">übertragen wird das <strong>Elektron</strong> (e⁻)</p>
+                            </div>
+                            <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5 text-center">
+                                <p class="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">Säure-Base-Reaktion</p>
+                                <p class="formula font-bold text-blue-900 text-sm md:text-base">HA1 + B2 ⇌ A1⁻ + HB2⁺</p>
+                                <p class="text-xs text-blue-800 mt-2">übertragen wird das <strong>Proton</strong> (H⁺)</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto rounded-xl border border-gray-200">
+                            <table class="w-full text-left border-collapse min-w-[520px] text-sm">
+                                <thead><tr class="bg-gray-100 text-gray-700 border-b-2 border-gray-300"><th class="p-3 font-bold">Merkmal</th><th class="p-3 font-bold text-red-700">Redoxreaktion</th><th class="p-3 font-bold text-blue-700">Säure-Base-Reaktion</th></tr></thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-100"><td class="p-3 font-semibold">Übertragenes Teilchen</td><td class="p-3 formula">Elektron (e⁻)</td><td class="p-3 formula">Proton (H⁺)</td></tr>
+                                    <tr class="border-b border-gray-100 bg-gray-50"><td class="p-3 font-semibold">Donator</td><td class="p-3">Elektronendonator = <strong>Reduktionsmittel</strong></td><td class="p-3">Protonendonator = <strong>Säure</strong></td></tr>
+                                    <tr class="border-b border-gray-100"><td class="p-3 font-semibold">Akzeptor</td><td class="p-3">Elektronenakzeptor = <strong>Oxidationsmittel</strong></td><td class="p-3">Protonenakzeptor = <strong>Base</strong></td></tr>
+                                    <tr class="border-b border-gray-100 bg-gray-50"><td class="p-3 font-semibold">Korrespondierendes Paar</td><td class="p-3 formula">Redoxpaar Red/Ox</td><td class="p-3 formula">Säure-Base-Paar HA/A⁻</td></tr>
+                                    <tr class="border-b border-gray-100"><td class="p-3 font-semibold">Anzahl beteiligter Paare</td><td class="p-3">immer zwei</td><td class="p-3">immer zwei</td></tr>
+                                    <tr class="border-b border-gray-100 bg-gray-50"><td class="p-3 font-semibold">Reihe nach Stärke</td><td class="p-3">Redoxreihe</td><td class="p-3">pK<sub>S</sub>/pK<sub>B</sub>-Tabelle</td></tr>
+                                    <tr><td class="p-3 font-semibold">Beispiel</td><td class="p-3 formula text-xs">Zn + Cu²⁺ → Zn²⁺ + Cu</td><td class="p-3 formula text-xs">HCl + NH₃ → Cl⁻ + NH₄⁺</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm mb-5 border border-gray-100 overflow-hidden">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 md:p-6 font-bold text-primary text-left text-lg md:text-2xl bg-white focus:outline-none" onclick="toggleAccordion('acc-an-2')">
+                        <span class="flex items-center gap-3"><i data-lucide="alert-triangle" class="w-6 h-6 md:w-7 md:h-7 flex-shrink-0"></i> Grenzen der Analogie</span>
+                        <i data-lucide="chevron-down" id="acc-an-2-icon" class="transition-transform duration-300 flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-an-2-content" class="hidden p-5 md:p-6 pt-0 bg-white reveal-anim border-t border-gray-100">
+                        <div class="space-y-3 mt-4">
+                            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                                <h4 class="font-bold text-amber-900 text-sm mb-1">Unterschiedliche Teilchenzahl</h4>
+                                <p class="text-sm text-amber-900">Bei einer Protolyse wird pro Schritt <strong>genau ein</strong> Proton übertragen. Bei Redoxreaktionen ist die Elektronenzahl je Redoxpaar verschieden (1 e⁻ bei Ag⁺/Ag, 5 e⁻ bei MnO₄⁻/Mn²⁺). Deshalb ist der Ausgleich über das kgV nötig — ein Schritt, den es bei Säure-Base-Reaktionen so nicht gibt.</p>
+                            </div>
+                            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                                <h4 class="font-bold text-amber-900 text-sm mb-1">Freie Teilchen in Lösung</h4>
+                                <p class="text-sm text-amber-900">Protonen liegen in Wasser als H₃O⁺ gebunden vor, sind also indirekt „vorhanden". Freie Elektronen gibt es in wässriger Lösung dagegen gar nicht — sie müssen im selben Moment vom Akzeptor übernommen werden.</p>
+                            </div>
+                            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                                <h4 class="font-bold text-amber-900 text-sm mb-1">Das Milieu spielt mit</h4>
+                                <p class="text-sm text-amber-900">Bei Redoxreaktionen bestimmt das Milieu mit, welches Produkt entsteht (MnO₄⁻ → Mn²⁺ im Sauren, → MnO₄²⁻ im stark Alkalischen). Ein solches Umschalten des Produkts durch das Milieu kennt das Säure-Base-Konzept nicht.</p>
+                            </div>
+                            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                                <h4 class="font-bold text-amber-900 text-sm mb-1">Ampholyt vs. Dis-/Komproportionierung</h4>
+                                <p class="text-sm text-amber-900">Ein Ampholyt (z. B. H₂O) kann Protonen abgeben <em>und</em> aufnehmen. Das Redox-Gegenstück ist die <strong>Disproportionierung</strong>, bei der ein Teilchen gleichzeitig oxidiert und reduziert wird (Cl₂ → Cl⁻ + OCl⁻) — die Parallele ist da, aber nicht exakt.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ TAB 6: TRAINING ============ -->
+            <div id="tab-training" class="tab-content">
+                <div id="trOverview"></div>
+                <div id="trDetail" class="hidden"></div>
+            </div>
+
+            <!-- ============ TAB 7: GLOSSAR ============ -->
+            <div id="tab-glossar" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Fachsprache & Glossar</h2>
+                    <p class="text-gray-600">Alle Fachbegriffe der Einheit im Überblick (DE–EN)</p>
+                </div>
+                <div class="relative mb-6">
+                    <i data-lucide="search" class="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" id="glossarSearch" oninput="filterGlossar()" placeholder="Begriff suchen..." class="w-full bg-white border-2 border-gray-200 rounded-2xl p-4 pl-12 outline-none focus:border-primary transition shadow-sm">
+                </div>
+                <div id="glossarList" class="space-y-3"></div>
+                <p id="glossarEmpty" class="hidden text-center text-gray-400 py-8">Kein Begriff gefunden.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+    // ================== CORE ==================
+    function initApp() {
+        lucide.createIcons();
+        renderOzRules();
+        renderRedoxreihe();
+        renderMetalSimulator();
+        renderOmRmTrainer();
+        renderDonAkzQuiz();
+        renderOzTrainer();
+        renderOrganicAnalyzer();
+        renderRedoxJaNeinQuiz();
+        renderGlTrainer();
+        renderFehler();
+        renderMnLadder();
+        renderMnFeDerivation();
+        renderTraining();
+        renderGlossar();
+        lucide.createIcons();
+    }
+    function switchTab(tab) {
+        const wasActive = document.getElementById('tab-' + tab).classList.contains('active');
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.querySelectorAll('header nav button').forEach(btn => {
+            btn.classList.remove('bg-white', 'text-primary', 'shadow');
+            btn.classList.add('bg-secondary', 'bg-opacity-30', 'text-white');
+        });
+        const b = document.getElementById('nav-' + tab);
+        b.classList.remove('bg-secondary', 'bg-opacity-30', 'text-white');
+        b.classList.add('bg-white', 'text-primary', 'shadow');
+        document.getElementById('mainScrollArea').scrollTop = 0;
+        if (tab === 'training' && wasActive && trOpen) closeTrain();
+    }
+    function toggleAccordion(id) {
+        const c = document.getElementById(id + '-content'), i = document.getElementById(id + '-icon');
+        if (!c.classList.contains('hidden')) { c.classList.add('hidden'); if (i) i.style.transform = 'rotate(0deg)'; return; }
+        // Nur ein Akkordeon gleichzeitig geöffnet
+        document.querySelectorAll('[id^="acc-"][id$="-content"]').forEach(o => {
+            if (o === c || o.classList.contains('hidden')) return;
+            o.classList.add('hidden');
+            const oi = document.getElementById(o.id.replace(/-content$/, '-icon'));
+            if (oi) oi.style.transform = 'rotate(0deg)';
+        });
+        c.classList.remove('hidden'); if (i) i.style.transform = 'rotate(180deg)';
+        // Schließt sich ein Akkordeon darüber, rutscht das geöffnete nach oben – wieder ins Bild holen
+        const main = document.getElementById('mainScrollArea');
+        const top = c.parentElement.getBoundingClientRect().top - main.getBoundingClientRect().top;
+        if (top < 0) main.scrollTop += top - 12;
+    }
+    // Fortschritt: localStorage wenn verfügbar, sonst In-Memory-Fallback
+    // (localStorage ist z. B. bei lokal geöffneten Dateien teilweise gesperrt)
+    const memStore = {};
+    function store(k, v) {
+        memStore[k] = v;
+        try { localStorage.setItem('k12redox_' + k, JSON.stringify(v)); } catch (e) {}
+    }
+    function load(k, d) {
+        try {
+            const v = localStorage.getItem('k12redox_' + k);
+            if (v !== null) return JSON.parse(v);
+        } catch (e) {}
+        return memStore[k] !== undefined ? memStore[k] : d;
+    }
+    function fb(ok, title, text) {
+        return `<div class="p-4 rounded-xl text-left reveal-anim ${ok ? 'bg-light text-[#2f6137] border border-[#dfeae3]' : 'bg-red-50 text-red-900 border border-red-200'}">
+            <p class="font-bold mb-1 flex items-center gap-2">${ok ? '<i data-lucide="check-circle" class="w-5 h-5"></i>' : '<i data-lucide="x-circle" class="w-5 h-5"></i>'}${title}</p>
+            <p class="text-sm">${text}</p></div>`;
+    }
+
+    // ================== OZ-REGELN ==================
+    const OZ_RULES = [
+        { n: 1, title: 'Die Summenregel', short: 'Alle Oxidationszahlen zusammen ergeben bei Molekülen 0, bei Molekül-Ionen die Ionenladung.', ex: 'H₂SO₄: 2·(+I) + S + 4·(−II) = 0 → S = +VI' },
+        { n: 2, title: 'Metalle sind immer positiv', short: 'Ein Metall-Atom hat in einer Verbindung immer eine positive Oxidationszahl — ausnahmslos.', ex: 'Na → +I · Mg → +II · Fe → +II oder +III' },
+        { n: 3, title: 'Fluor besitzt stets −I', short: 'Als elektronegativstes Element hat Fluor in jeder Verbindung die Oxidationszahl −I.', ex: 'OF₂: F = −I (auch gegenüber Sauerstoff)' },
+        { n: 4, title: 'Wasserstoff: meist +I', short: 'Ausnahme: In Metallhydriden ist Wasserstoff das elektronegativere Atom, die Polarität kehrt sich um.', ex: 'H₂O: H = +I | NaH: H = −I (Hydrid)' },
+        { n: 5, title: 'Sauerstoff: meist −II', short: 'Ausnahmen: In Peroxiden −I, in Verbindung mit Fluor +II.', ex: 'H₂O: O = −II | H₂O₂: O = −I | OF₂: O = +II' }
+    ];
+    function renderOzRules() {
+        document.getElementById('ozRulesArea').innerHTML = OZ_RULES.map(r => `
+            <div class="rule-card bg-white border-2 border-gray-200 rounded-2xl p-4 relative">
+                <span class="absolute -top-2.5 left-4 bg-primary text-white text-xs font-bold px-2.5 py-0.5 rounded-full">Regel ${r.n}</span>
+                <h4 class="font-bold text-gray-800 mt-1.5 mb-1">${r.title}</h4>
+                <p class="text-sm text-gray-600 mb-2">${r.short}</p>
+                <p class="formula text-xs bg-gray-50 border border-gray-200 rounded-lg p-2 text-gray-700">${r.ex}</p>
+            </div>`).join('');
+    }
+
+    // ================== REDOXREIHE ==================
+    const METAL_SERIES = ['Zn', 'Fe', 'Cu', 'Ag'];
+    const NONMETAL_SERIES = ['I', 'Br', 'Cl'];
+    function renderRedoxreihe() {
+        const metals = [{ r: 'Zn', o: 'Zn²⁺' }, { r: 'Fe', o: 'Fe²⁺' }, { r: 'Cu', o: 'Cu²⁺' }, { r: 'Ag', o: 'Ag⁺' }];
+        const nonmetals = [{ r: 'I⁻', o: 'I₂' }, { r: 'Br⁻', o: 'Br₂' }, { r: 'Cl⁻', o: 'Cl₂' }];
+        const block = (title, rows, topTxt, botTxt) => `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider text-center mb-3">${title}</p>
+                <div class="flex items-center gap-1.5 text-[11px] font-bold text-red-600 mb-2 leading-tight">
+                    <i data-lucide="arrow-up" class="w-4 h-4 flex-shrink-0"></i><span>${topTxt}</span>
+                </div>
+                <div class="space-y-1.5">
+                    ${rows.map(p => `<div class="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center justify-center gap-2 formula font-bold">
+                        <span class="text-red-700">${p.r}</span><span class="text-gray-300">/</span><span class="text-blue-700">${p.o}</span></div>`).join('')}
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 mt-2 leading-tight">
+                    <i data-lucide="arrow-down" class="w-4 h-4 flex-shrink-0"></i><span>${botTxt}</span>
+                </div>
+            </div>`;
+        document.getElementById('redoxreiheArea').innerHTML = `<div class="grid md:grid-cols-2 gap-4">
+            ${block('Redoxreihe der Metalle', metals, 'nach oben: Metall-Atome werden stärkere Reduktionsmittel', 'nach unten: Metall-Ionen werden stärkere Oxidationsmittel')}
+            ${block('Redoxreihe der Nichtmetalle', nonmetals, 'nach oben: Nichtmetall-Ionen werden stärkere Reduktionsmittel', 'nach unten: Nichtmetall-Moleküle werden stärkere Oxidationsmittel')}
+        </div>`;
+    }
+
+    // ================== REDOXPAAR-SIMULATOR ==================
+    const SIM_PAIRS = [
+        { t: 'Zink in Kupfersulfat-Lösung', kind: 'm', donor: 'Zn', dColor: '#a8b3bf', acc: 'Cu²⁺', accProd: 'Cu', aColor: '#d97706', react: true, eq: 'Zn + Cu²⁺ → Zn²⁺ + Cu', why: 'Zink steht in der Redoxreihe <strong>über</strong> Kupfer und kann dessen Ionen daher reduzieren.' },
+        { t: 'Eisen in Kupfersulfat-Lösung', kind: 'm', donor: 'Fe', dColor: '#8a8378', acc: 'Cu²⁺', accProd: 'Cu', aColor: '#d97706', react: true, eq: 'Fe + Cu²⁺ → Fe²⁺ + Cu', why: 'Eisen steht <strong>über</strong> Kupfer: Am Nagel scheidet sich Kupfer ab, in Lösung entstehen Fe²⁺-Ionen.' },
+        { t: 'Kupfer in Silbernitrat-Lösung', kind: 'm', donor: 'Cu', dColor: '#d97706', acc: 'Ag⁺', accProd: 'Ag', aColor: '#b8bfc7', react: true, eq: 'Cu + 2 Ag⁺ → Cu²⁺ + 2 Ag', why: 'Kupfer steht <strong>über</strong> Silber. Beachte: Cu gibt 2 e⁻ ab, Ag⁺ nimmt nur 1 e⁻ auf → Faktor 2.' },
+        { t: 'Zink in Silbernitrat-Lösung', kind: 'm', donor: 'Zn', dColor: '#a8b3bf', acc: 'Ag⁺', accProd: 'Ag', aColor: '#b8bfc7', react: true, eq: 'Zn + 2 Ag⁺ → Zn²⁺ + 2 Ag', why: 'Zink steht ganz oben in der Reihe und reduziert die Ionen aller darunter stehenden Metalle.' },
+        { t: 'Kupfer in Eisen(II)-sulfat-Lösung', kind: 'm', donor: 'Cu', dColor: '#d97706', acc: 'Fe²⁺', accProd: 'Fe', aColor: '#8a8378', react: false, why: 'Kupfer steht <strong>unter</strong> Eisen (ist edler). Kupfer-Atome sind nicht in der Lage, Fe²⁺-Ionen zu reduzieren.' },
+        { t: 'Kupfer in Zinksulfat-Lösung', kind: 'm', donor: 'Cu', dColor: '#d97706', acc: 'Zn²⁺', accProd: 'Zn', aColor: '#a8b3bf', react: false, why: 'Kupfer steht <strong>unter</strong> Zink. Ein edleres Metall gibt keine Elektronen an die Ionen eines unedleren Metalls ab.' },
+        { t: 'Silber in Kupfersulfat-Lösung', kind: 'm', donor: 'Ag', dColor: '#b8bfc7', acc: 'Cu²⁺', accProd: 'Cu', aColor: '#d97706', react: false, why: 'Silber steht ganz <strong>unten</strong> in der Redoxreihe — es ist das schwächste Reduktionsmittel der Reihe.' },
+        { t: 'Kaliumiodid-Lösung + Bromwasser', kind: 'n', donor: 'I⁻', dColor: '#7c3aed', acc: 'Br₂', accProd: 'Br⁻', aColor: '#b45309', react: true, eq: '2 I⁻ + Br₂ → I₂ + 2 Br⁻', why: 'Iodid steht <strong>über</strong> Brom: Iodid-Ionen reduzieren Brom-Moleküle zu Bromid-Ionen. Die Violettfärbung zeigt gebildetes Iod an.' },
+        { t: 'Kaliumbromid-Lösung + Chlorwasser', kind: 'n', donor: 'Br⁻', dColor: '#b45309', acc: 'Cl₂', accProd: 'Cl⁻', aColor: '#65a30d', react: true, eq: '2 Br⁻ + Cl₂ → Br₂ + 2 Cl⁻', why: 'Bromid steht <strong>über</strong> Chlor. Die Braunfärbung zeigt gebildetes Brom an.' },
+        { t: 'Kaliumbromid-Lösung + Iodwasser', kind: 'n', donor: 'Br⁻', dColor: '#b45309', acc: 'I₂', accProd: 'I⁻', aColor: '#7c3aed', react: false, why: 'Bromid steht <strong>unter</strong> Iod. Iod ist das schwächere Oxidationsmittel und kann Bromid nicht oxidieren.' }
+    ];
+    let simIdx = 0, simPhase = 'predict';
+    function renderMetalSimulator() {
+        document.getElementById('metalSimContainer').innerHTML = `
+            <div class="bg-gray-50 rounded-2xl p-4 md:p-6 border border-gray-200 shadow-inner">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Wähle eine Kombination:</label>
+                <select id="simSelect" onchange="onSimChange()" class="w-full bg-white border border-gray-200 text-gray-800 rounded-xl p-3 mb-5 outline-none focus:ring-2 focus:ring-primary transition">
+                    ${SIM_PAIRS.map((p, i) => `<option value="${i}">${p.t}</option>`).join('')}
+                </select>
+                <div id="simSvg" class="w-full max-w-lg mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 mb-5 p-3"></div>
+                <div id="simInteract"></div>
+            </div>`;
+        drawSim(false); renderSimInteract();
+    }
+    function onSimChange() { simIdx = +document.getElementById('simSelect').value; simPhase = 'predict'; drawSim(false); renderSimInteract(); }
+    function drawSim(moved) {
+        const p = SIM_PAIRS[simIdx], show = moved && p.react;
+        document.getElementById('simSvg').innerHTML = `
+            <svg viewBox="0 0 480 190" class="w-full h-auto">
+                <circle cx="120" cy="82" r="40" fill="${p.dColor}"/>
+                <text x="120" y="90" font-size="20" fill="#fff" font-weight="bold" text-anchor="middle" font-family="monospace">${p.donor}</text>
+                <text x="120" y="150" font-size="13" fill="#6b7280" font-weight="bold" text-anchor="middle">Donator</text>
+                <text x="120" y="168" font-size="15" fill="#334155" font-weight="bold" text-anchor="middle" font-family="monospace">${show ? (p.kind === 'm' ? p.donor + (p.donor === 'Ag' ? '⁺' : '²⁺') : (p.donor === 'I⁻' ? 'I₂' : 'Br₂')) : p.donor}</text>
+                <circle cx="360" cy="82" r="40" fill="${p.aColor}"/>
+                <text x="360" y="90" font-size="17" fill="#fff" font-weight="bold" text-anchor="middle" font-family="monospace">${p.acc}</text>
+                <text x="360" y="150" font-size="13" fill="#6b7280" font-weight="bold" text-anchor="middle">Akzeptor</text>
+                <text x="360" y="168" font-size="15" fill="#334155" font-weight="bold" text-anchor="middle" font-family="monospace">${show ? p.accProd : p.acc}</text>
+                <g style="transition:transform 1.1s ease-in-out; transform:${show ? 'translate(180px,0)' : 'translate(0,0)'}; opacity:${p.react ? 1 : 0}">
+                    <circle cx="170" cy="38" r="14" fill="#facc15" stroke="#ca8a04" stroke-width="1.5" class="${simPhase === 'running' ? 'electron' : ''}"/>
+                    <text x="170" y="43" font-size="12" fill="#78350f" font-weight="bold" text-anchor="middle">e⁻</text>
+                </g>
+            </svg>`;
+    }
+    function renderSimInteract() {
+        const p = SIM_PAIRS[simIdx], el = document.getElementById('simInteract');
+        if (simPhase === 'predict') {
+            el.innerHTML = `<p class="text-sm font-bold text-gray-700 text-center mb-3">Deine Vorhersage: Läuft eine Reaktion ab?</p>
+                <div class="grid grid-cols-2 gap-3 max-w-md mx-auto">
+                    <button onclick="checkSim(true)" class="btn-tap bg-light hover:brightness-95 text-[#2f6137] font-bold py-3 rounded-xl border-2 border-[#dfeae3]">Ja, Reaktion</button>
+                    <button onclick="checkSim(false)" class="btn-tap bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl border-2 border-gray-300">Keine Reaktion</button>
+                </div>`;
+        }
+        lucide.createIcons();
+    }
+    function checkSim(guess) {
+        const p = SIM_PAIRS[simIdx], ok = guess === p.react;
+        simPhase = 'running'; drawSim(true);
+        const el = document.getElementById('simInteract');
+        el.innerHTML = fb(ok, ok ? 'Richtig vorhergesagt!' : 'Nicht ganz.',
+            (p.react ? '<strong>Die Reaktion läuft ab.</strong> ' : '<strong>Es läuft keine Reaktion ab.</strong> ') + p.why) +
+            (p.react ? `<p class="formula font-bold text-center mt-3 bg-white p-3 rounded-xl border-2 border-primary text-primary">${p.eq}</p>` : '') +
+            `<button onclick="nextSim()" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Nächste Kombination</button>`;
+        lucide.createIcons();
+        setTimeout(() => { simPhase = 'done'; }, 1200);
+    }
+    function nextSim() {
+        simIdx = (simIdx + 1) % SIM_PAIRS.length; simPhase = 'predict';
+        document.getElementById('simSelect').value = simIdx;
+        drawSim(false); renderSimInteract();
+    }
+
+    // ================== OXIDATIONS-/REDUKTIONSMITTEL-TRAINER ==================
+    const OM_RM = [
+        { eq: 'Zn + Cu²⁺ → Zn²⁺ + Cu', ask: 'Zn', role: 'rm', exp: 'Zn gibt Elektronen ab, reduziert also Cu²⁺ zu Cu. Zn ist das Reduktionsmittel und wird selbst oxidiert.' },
+        { eq: 'Zn + Cu²⁺ → Zn²⁺ + Cu', ask: 'Cu²⁺', role: 'om', exp: 'Cu²⁺ nimmt Elektronen auf, oxidiert also Zn. Cu²⁺ ist das Oxidationsmittel und wird selbst reduziert.' },
+        { eq: '2 Mg + O₂ → 2 MgO', ask: 'O₂', role: 'om', exp: 'Die Sauerstoff-Atome nehmen Elektronen auf und werden zu O²⁻. O₂ ist das Oxidationsmittel.' },
+        { eq: '2 Mg + O₂ → 2 MgO', ask: 'Mg', role: 'rm', exp: 'Magnesium gibt seine Außenelektronen ab (Mg → Mg²⁺ + 2 e⁻). Mg ist das Reduktionsmittel.' },
+        { eq: 'Mg + Br₂ → MgBr₂', ask: 'Br₂', role: 'om', exp: 'Brom-Moleküle nehmen Elektronen auf und werden zu Bromid-Ionen. Br₂ ist das Oxidationsmittel.' },
+        { eq: '2 I⁻ + Br₂ → I₂ + 2 Br⁻', ask: 'I⁻', role: 'rm', exp: 'Iodid-Ionen geben Elektronen ab und werden zu Iod oxidiert. I⁻ ist das Reduktionsmittel.' },
+        { eq: 'Cu + 2 Ag⁺ → Cu²⁺ + 2 Ag', ask: 'Ag⁺', role: 'om', exp: 'Silber-Ionen nehmen je ein Elektron auf und werden zu Silber reduziert. Ag⁺ ist das Oxidationsmittel.' },
+        { eq: 'Fe + Cu²⁺ → Fe²⁺ + Cu', ask: 'Fe', role: 'rm', exp: 'Eisen gibt zwei Elektronen ab und reduziert damit Cu²⁺. Fe ist das Reduktionsmittel.' }
+    ];
+    let omShuffled = [], omIdx = 0;
+    function renderOmRmTrainer() { omShuffled = [...OM_RM].sort(() => Math.random() - .5); omIdx = 0; showOmRm(); }
+    function showOmRm() {
+        const it = omShuffled[omIdx % omShuffled.length];
+        document.getElementById('omRmTrainerArea').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5">
+                <p class="formula font-bold text-center text-gray-800 mb-4 text-sm md:text-base">${it.eq}</p>
+                <p class="text-sm text-gray-600 text-center mb-4">Welche Rolle hat <span class="formula font-bold text-primary text-base">${it.ask}</span> in dieser Reaktion?</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="checkOmRm('om')" class="btn-tap bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 rounded-xl border-2 border-blue-200 text-sm">Oxidationsmittel</button>
+                    <button onclick="checkOmRm('rm')" class="btn-tap bg-red-50 hover:bg-red-100 text-red-700 font-bold py-3 rounded-xl border-2 border-red-200 text-sm">Reduktionsmittel</button>
+                </div>
+                <div id="omRmFb" class="mt-4"></div>
+            </div>`;
+    }
+    function checkOmRm(a) {
+        const it = omShuffled[omIdx % omShuffled.length];
+        document.getElementById('omRmFb').innerHTML = fb(a === it.role, a === it.role ? 'Richtig!' : 'Leider falsch.', it.exp) +
+            `<button onclick="omIdx++; showOmRm();" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Nächste Aufgabe</button>`;
+        lucide.createIcons();
+    }
+
+    // ================== MINI-QUIZ DONATOR/AKZEPTOR ==================
+    const DON_AKZ = [
+        { p: 'Zn', r: 'donator', e: 'Zink ist ein unedles Metall und gibt zwei Elektronen ab: Zn → Zn²⁺ + 2 e⁻.' },
+        { p: 'Cu²⁺', r: 'akzeptor', e: 'Metall-Ionen nehmen Elektronen auf und werden zum Metall reduziert: Cu²⁺ + 2 e⁻ → Cu.' },
+        { p: 'Ag⁺', r: 'akzeptor', e: 'Silber-Ionen nehmen je ein Elektron auf: Ag⁺ + e⁻ → Ag.' },
+        { p: 'Mg', r: 'donator', e: 'Magnesium gibt seine beiden Außenelektronen ab: Mg → Mg²⁺ + 2 e⁻.' },
+        { p: 'Cl₂', r: 'akzeptor', e: 'Nichtmetall-Moleküle nehmen Elektronen auf: Cl₂ + 2 e⁻ → 2 Cl⁻.' },
+        { p: 'I⁻', r: 'donator', e: 'Iodid-Ionen geben Elektronen ab: 2 I⁻ → I₂ + 2 e⁻.' },
+        { p: 'O₂', r: 'akzeptor', e: 'Sauerstoff-Moleküle nehmen Elektronen auf: O₂ + 4 e⁻ → 2 O²⁻.' },
+        { p: 'Cu', r: 'donator', e: 'Auch Kupfer kann Elektronen abgeben — allerdings nur an Akzeptoren, die in der Redoxreihe unter ihm stehen (z. B. Ag⁺).' }
+    ];
+    let daShuffled = [], daIdx = 0;
+    function renderDonAkzQuiz() { daShuffled = [...DON_AKZ].sort(() => Math.random() - .5); daIdx = 0; showDonAkz(); }
+    function showDonAkz() {
+        const it = daShuffled[daIdx % daShuffled.length];
+        document.getElementById('donAkzQuizArea').innerHTML = `
+            <p class="text-sm text-gray-600 mb-4">Reagiert dieses Teilchen als Elektronendonator oder als Elektronenakzeptor?</p>
+            <div class="bg-white py-6 rounded-xl shadow-sm border border-gray-200 mb-4"><div class="text-3xl formula font-bold text-gray-800">${it.p}</div></div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="checkDonAkz('donator')" class="btn-tap bg-red-50 hover:bg-red-100 text-red-700 font-bold py-3 rounded-xl border-2 border-red-200">Donator</button>
+                <button onclick="checkDonAkz('akzeptor')" class="btn-tap bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 rounded-xl border-2 border-blue-200">Akzeptor</button>
+            </div><div id="daFb" class="mt-4"></div>`;
+    }
+    function checkDonAkz(a) {
+        const it = daShuffled[daIdx % daShuffled.length];
+        document.getElementById('daFb').innerHTML = fb(a === it.r, a === it.r ? 'Richtig!' : 'Leider falsch.', it.e) +
+            `<button onclick="daIdx++; showDonAkz();" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Nächstes Teilchen</button>`;
+        lucide.createIcons();
+    }
+    // ================== OZ-TRAINER (Eingabe) ==================
+    const ROMAN = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8 };
+    function parseOZ(raw) {
+        if (!raw) return null;
+        let s = raw.toString().trim().toUpperCase().replace(/[−–—]/g, '-').replace(/\s/g, '');
+        if (s === '') return null;
+        let sign = 1;
+        if (s[0] === '-') { sign = -1; s = s.slice(1); }
+        else if (s[0] === '+') { s = s.slice(1); }
+        if (/^\d+$/.test(s)) return sign * parseInt(s, 10);
+        if (ROMAN[s] !== undefined) return sign * ROMAN[s];
+        return null;
+    }
+    function toRoman(n) {
+        const a = Math.abs(n), map = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+        if (a === 0) return '0';
+        return (n < 0 ? '−' : '+') + map[a];
+    }
+    const OZ_TASKS = [
+        { f: 'H₂O', el: 'O', ans: -2, steps: ['Regel 4: H = +I, zwei H-Atome ergeben +II.', 'Regel 1 (Summenregel): Das Molekül ist neutral, die Summe muss 0 sein.', '2·(+I) + OZ(O) = 0 → OZ(O) = −II'] },
+        { f: 'CO₂', el: 'C', ans: 4, steps: ['Regel 5: O = −II, zwei O-Atome ergeben −IV.', 'Regel 1: Molekül neutral → Summe 0.', 'OZ(C) + (−IV) = 0 → OZ(C) = +IV'] },
+        { f: 'CH₄', el: 'C', ans: -4, steps: ['Regel 4: H = +I, vier H-Atome ergeben +IV.', 'Regel 1: Molekül neutral → Summe 0.', 'OZ(C) + (+IV) = 0 → OZ(C) = −IV'] },
+        { f: 'NH₃', el: 'N', ans: -3, steps: ['Regel 4: H = +I, drei H-Atome ergeben +III.', 'Regel 1: Molekül neutral → Summe 0.', 'OZ(N) + (+III) = 0 → OZ(N) = −III'] },
+        { f: 'H₂SO₄', el: 'S', ans: 6, steps: ['Regel 4: H = +I → 2·(+I) = +II.', 'Regel 5: O = −II → 4·(−II) = −VIII.', 'Regel 1: (+II) + OZ(S) + (−VIII) = 0 → OZ(S) = +VI'] },
+        { f: 'SO₃²⁻', el: 'S', ans: 4, steps: ['Regel 5: O = −II → 3·(−II) = −VI.', 'Regel 1 für Molekül-Ionen: Die Summe entspricht der Ionenladung, hier −2.', 'OZ(S) + (−VI) = −2 → OZ(S) = +IV'] },
+        { f: 'SO₄²⁻', el: 'S', ans: 6, steps: ['Regel 5: O = −II → 4·(−II) = −VIII.', 'Regel 1: Summe = Ionenladung = −2.', 'OZ(S) + (−VIII) = −2 → OZ(S) = +VI'] },
+        { f: 'MnO₄⁻', el: 'Mn', ans: 7, steps: ['Regel 5: O = −II → 4·(−II) = −VIII.', 'Regel 1: Summe = Ionenladung = −1.', 'OZ(Mn) + (−VIII) = −1 → OZ(Mn) = +VII'] },
+        { f: 'MnO₄²⁻', el: 'Mn', ans: 6, steps: ['Regel 5: O = −II → 4·(−II) = −VIII.', 'Regel 1: Summe = Ionenladung = −2.', 'OZ(Mn) + (−VIII) = −2 → OZ(Mn) = +VI'] },
+        { f: 'MnO₂', el: 'Mn', ans: 4, steps: ['Regel 5: O = −II → 2·(−II) = −IV.', 'Regel 1: Molekül neutral → Summe 0.', 'OZ(Mn) + (−IV) = 0 → OZ(Mn) = +IV'] },
+        { f: 'KMnO₄', el: 'Mn', ans: 7, steps: ['Regel 2: Kalium ist ein Metall → K = +I.', 'Regel 5: O = −II → 4·(−II) = −VIII.', 'Regel 1: (+I) + OZ(Mn) + (−VIII) = 0 → OZ(Mn) = +VII'] },
+        { f: 'MnSO₄', el: 'Mn', ans: 2, steps: ['Das Sulfat-Ion SO₄²⁻ trägt die Ladung −2.', 'Regel 1: Das Salz ist insgesamt neutral.', 'OZ(Mn) + (−2) = 0 → OZ(Mn) = +II'] },
+        { f: 'Cr₂O₇²⁻', el: 'Cr', ans: 6, steps: ['Regel 5: O = −II → 7·(−II) = −XIV.', 'Regel 1: Summe = Ionenladung = −2.', '2·OZ(Cr) + (−XIV) = −2 → 2·OZ(Cr) = +XII → OZ(Cr) = +VI'] },
+        { f: 'NO₃⁻', el: 'N', ans: 5, steps: ['Regel 5: O = −II → 3·(−II) = −VI.', 'Regel 1: Summe = Ionenladung = −1.', 'OZ(N) + (−VI) = −1 → OZ(N) = +V'] },
+        { f: 'NO₂⁻', el: 'N', ans: 3, steps: ['Regel 5: O = −II → 2·(−II) = −IV.', 'Regel 1: Summe = Ionenladung = −1.', 'OZ(N) + (−IV) = −1 → OZ(N) = +III'] },
+        { f: 'H₂O₂', el: 'O', ans: -1, trap: true, steps: ['Regel 4 hat Vorrang vor Regel 5: H bleibt +I → 2·(+I) = +II.', 'Regel 1: Molekül neutral → die beiden O-Atome müssen zusammen −II ergeben.', 'Pro O-Atom: OZ(O) = −I — typisch für ein <strong>Peroxid</strong>.'] },
+        { f: 'NaH', el: 'H', ans: -1, trap: true, steps: ['Regel 2 hat Vorrang vor Regel 4: Natrium ist ein Metall → Na = +I, ausnahmslos.', 'Regel 1: Verbindung neutral → Summe 0.', '(+I) + OZ(H) = 0 → OZ(H) = −I. Wasserstoff liegt als <strong>Hydrid-Ion</strong> vor.'] },
+        { f: 'OF₂', el: 'O', ans: 2, trap: true, steps: ['Regel 3 hat Vorrang vor Regel 5: F = −I → 2·(−I) = −II.', 'Regel 1: Molekül neutral → Summe 0.', 'OZ(O) + (−II) = 0 → OZ(O) = +II — Sauerstoff ist hier ausnahmsweise positiv!'] }
+    ];
+    let ozOrder = [], ozPos = 0, ozStats = { right: 0, total: 0 };
+    function renderOzTrainer() {
+        ozOrder = OZ_TASKS.map((_, i) => i).sort(() => Math.random() - .5); ozPos = 0; ozStats = { right: 0, total: 0 };
+        showOzTask();
+    }
+    function showOzTask() {
+        const t = OZ_TASKS[ozOrder[ozPos % ozOrder.length]];
+        document.getElementById('ozTrainerContainer').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 md:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Aufgabe ${ozPos + 1}</span>
+                    <span id="ozScore" class="text-xs font-bold text-primary bg-light px-3 py-1 rounded-full">${ozStats.right} / ${ozStats.total} richtig</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3 text-center">Welche Oxidationszahl hat <span class="formula font-bold text-primary text-lg">${t.el}</span> in</p>
+                <div class="bg-white border-2 border-gray-200 rounded-xl py-5 text-center mb-4"><span class="formula font-bold text-3xl text-gray-800">${t.f}</span></div>
+                <div class="flex gap-2 max-w-sm mx-auto">
+                    <input id="ozInput" type="text" inputmode="text" autocomplete="off" placeholder="z. B. +VI"
+                        onkeydown="if(event.key==='Enter')checkOz()"
+                        class="oz-input flex-1 min-w-0 bg-white border-2 border-gray-300 rounded-xl p-3 font-bold text-lg">
+                    <button onclick="checkOz()" class="btn-tap flex-shrink-0 bg-primary hover:bg-[#2f6137] text-white font-bold px-4 sm:px-6 rounded-xl">Prüfen</button>
+                </div>
+                <p class="text-xs text-gray-400 text-center mt-2">Römische Zahlen (+VI) oder normale Zahlen (+6, 6, -2) sind beide erlaubt.</p>
+                <div id="ozFb" class="mt-4"></div>
+            </div>`;
+        const inp = document.getElementById('ozInput'); if (inp) inp.focus();
+    }
+    function checkOz() {
+        const t = OZ_TASKS[ozOrder[ozPos % ozOrder.length]];
+        const raw = document.getElementById('ozInput').value;
+        const val = parseOZ(raw);
+        if (val === null) {
+            document.getElementById('ozFb').innerHTML = `<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm reveal-anim">Bitte gib eine Oxidationszahl ein, z. B. <span class="formula font-bold">+VI</span>, <span class="formula font-bold">+6</span> oder <span class="formula font-bold">−2</span>.</div>`;
+            return;
+        }
+        const ok = val === t.ans;
+        ozStats.total++; if (ok) ozStats.right++;
+        document.getElementById('ozScore').textContent = `${ozStats.right} / ${ozStats.total} richtig`;
+        document.getElementById('ozFb').innerHTML =
+            fb(ok, ok ? `Richtig — OZ(${t.el}) = ${toRoman(t.ans)}` : `Nicht ganz. Richtig wäre OZ(${t.el}) = ${toRoman(t.ans)}`,
+                (t.trap ? '<strong>Achtung, Vorrang-Fall!</strong> ' : '') + 'Lösungsweg:') +
+            `<ol class="list-decimal list-inside text-sm text-gray-700 bg-white border border-gray-200 rounded-xl p-4 mt-3 space-y-1.5">
+                ${t.steps.map(s => `<li>${s}</li>`).join('')}</ol>
+            <button onclick="ozPos++; showOzTask();" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Nächste Aufgabe</button>`;
+        document.querySelector('#ozTrainerContainer .oz-input').disabled = true;
+        lucide.createIcons();
+    }
+
+    // ================== ORGANISCHE STRUKTURFORMEL-ANALYSE ==================
+    const BOND_CH = { contrib: -1, note: 'EN(C) 2,55 &gt; EN(H) 2,20 → C erhält das Elektronenpaar' };
+    const BOND_CO = { contrib: 1, note: 'EN(O) 3,44 &gt; EN(C) 2,55 → O erhält das Elektronenpaar' };
+    const BOND_CO2 = { contrib: 2, note: 'Doppelbindung zu O — zählt doppelt' };
+    const BOND_CC = { contrib: 0, note: 'gleiche EN → Elektronenpaar wird geteilt' };
+    const BOND_CCL = { contrib: 1, note: 'EN(Cl) 3,16 &gt; EN(C) 2,55 → Cl erhält das Elektronenpaar' };
+    const MOLECULES = [
+        { n: 'Methan', f: 'CH₄', hint: 'Das einzige C-Atom.', subs: [
+            { pos: 'up', lab: 'H', b: BOND_CH }, { pos: 'down', lab: 'H', b: BOND_CH }, { pos: 'left', lab: 'H', b: BOND_CH }, { pos: 'right', lab: 'H', b: BOND_CH }] },
+        { n: 'Methanol', f: 'CH₃OH', hint: 'Das einzige C-Atom.', subs: [
+            { pos: 'up', lab: 'O–H', b: BOND_CO }, { pos: 'down', lab: 'H', b: BOND_CH }, { pos: 'left', lab: 'H', b: BOND_CH }, { pos: 'right', lab: 'H', b: BOND_CH }] },
+        { n: 'Methanal', f: 'HCHO', hint: 'Das einzige C-Atom.', subs: [
+            { pos: 'up', lab: 'O', dbl: true, b: BOND_CO2 }, { pos: 'left', lab: 'H', b: BOND_CH }, { pos: 'right', lab: 'H', b: BOND_CH }] },
+        { n: 'Methansäure', f: 'HCOOH', hint: 'Das einzige C-Atom.', subs: [
+            { pos: 'up', lab: 'O', dbl: true, b: BOND_CO2 }, { pos: 'right', lab: 'O–H', b: BOND_CO }, { pos: 'left', lab: 'H', b: BOND_CH }] },
+        { n: 'Chlormethan', f: 'CH₃Cl', hint: 'Das einzige C-Atom.', subs: [
+            { pos: 'up', lab: 'Cl', b: BOND_CCL }, { pos: 'down', lab: 'H', b: BOND_CH }, { pos: 'left', lab: 'H', b: BOND_CH }, { pos: 'right', lab: 'H', b: BOND_CH }] },
+        { n: 'Ethanol', f: 'CH₃–CH₂OH', hint: 'Das C-Atom, das die OH-Gruppe trägt.', subs: [
+            { pos: 'left', lab: 'CH₃', b: BOND_CC }, { pos: 'up', lab: 'O–H', b: BOND_CO }, { pos: 'down', lab: 'H', b: BOND_CH }, { pos: 'right', lab: 'H', b: BOND_CH }] },
+        { n: 'Ethanal', f: 'CH₃–CHO', hint: 'Das C-Atom der Carbonylgruppe.', subs: [
+            { pos: 'left', lab: 'CH₃', b: BOND_CC }, { pos: 'up', lab: 'O', dbl: true, b: BOND_CO2 }, { pos: 'right', lab: 'H', b: BOND_CH }] },
+        { n: 'Ethansäure', f: 'CH₃–COOH', hint: 'Das C-Atom der Carboxylgruppe.', subs: [
+            { pos: 'left', lab: 'CH₃', b: BOND_CC }, { pos: 'up', lab: 'O', dbl: true, b: BOND_CO2 }, { pos: 'right', lab: 'O–H', b: BOND_CO }] },
+        { n: 'Kohlenstoffdioxid', f: 'CO₂', hint: 'Das einzige C-Atom.', subs: [
+            { pos: 'left', lab: 'O', dbl: true, b: BOND_CO2 }, { pos: 'right', lab: 'O', dbl: true, b: BOND_CO2 }] }
+    ];
+    let molIdx = 0, molRevealed = false;
+    function renderOrganicAnalyzer() {
+        document.getElementById('organicAnalyzerContainer').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-6">
+                <select id="molSelect" onchange="onMolChange()" class="w-full bg-white border border-gray-200 text-gray-800 rounded-xl p-3 mb-4 outline-none focus:ring-2 focus:ring-primary transition">
+                    ${MOLECULES.map((m, i) => `<option value="${i}">${m.n} (${m.f})</option>`).join('')}
+                </select>
+                <div id="molSvg" class="bg-white rounded-2xl border border-gray-200 p-3 mb-4"></div>
+                <div id="molBody"></div>
+            </div>`;
+        drawMolecule(); renderMolBody();
+    }
+    function onMolChange() { molIdx = +document.getElementById('molSelect').value; molRevealed = false; drawMolecule(); renderMolBody(); }
+    function drawMolecule() {
+        const m = MOLECULES[molIdx];
+        const CX = 210, CY = 112;
+        const anchor = { up: [210, 46], down: [210, 178], left: [110, 112], right: [310, 112] };
+        let bonds = '', labels = '';
+        m.subs.forEach(s => {
+            const [ax, ay] = anchor[s.pos];
+            let x1, y1, x2, y2, perp;
+            if (s.pos === 'up') { x1 = CX; y1 = CY - 26; x2 = ax; y2 = ay + 20; perp = [1, 0]; }
+            else if (s.pos === 'down') { x1 = CX; y1 = CY + 26; x2 = ax; y2 = ay - 20; perp = [1, 0]; }
+            else if (s.pos === 'left') { x1 = CX - 26; y1 = CY; x2 = ax + 26; y2 = ay; perp = [0, 1]; }
+            else { x1 = CX + 26; y1 = CY; x2 = ax - 26; y2 = ay; perp = [0, 1]; }
+            if (s.dbl) {
+                const o = 4;
+                bonds += `<line x1="${x1 + perp[0] * o}" y1="${y1 + perp[1] * o}" x2="${x2 + perp[0] * o}" y2="${y2 + perp[1] * o}" stroke="#475569" stroke-width="2.5"/>`;
+                bonds += `<line x1="${x1 - perp[0] * o}" y1="${y1 - perp[1] * o}" x2="${x2 - perp[0] * o}" y2="${y2 - perp[1] * o}" stroke="#475569" stroke-width="2.5"/>`;
+            } else {
+                bonds += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#475569" stroke-width="2.5"/>`;
+            }
+            const w = Math.max(30, s.lab.length * 13);
+            labels += `<rect x="${ax - w / 2}" y="${ay - 17}" width="${w}" height="34" rx="9" fill="#f1f5f9" stroke="#cbd5e1"/>
+                <text x="${ax}" y="${ay + 6}" font-size="17" fill="#334155" font-weight="bold" text-anchor="middle" font-family="monospace">${s.lab}</text>`;
+        });
+        document.getElementById('molSvg').innerHTML = `
+            <svg viewBox="0 0 420 224" class="w-full h-auto max-w-md mx-auto">
+                ${bonds}${labels}
+                <circle cx="${CX}" cy="${CY}" r="26" fill="#3d7c47"/>
+                <circle cx="${CX}" cy="${CY}" r="33" fill="none" stroke="#3d7c47" stroke-width="2" stroke-dasharray="4 3" opacity="0.55"/>
+                <text x="${CX}" y="${CY + 8}" font-size="24" fill="#fff" font-weight="bold" text-anchor="middle" font-family="monospace">C</text>
+            </svg>`;
+    }
+    function renderMolBody() {
+        const m = MOLECULES[molIdx];
+        const sum = m.subs.reduce((a, s) => a + s.b.contrib, 0);
+        const el = document.getElementById('molBody');
+        if (!molRevealed) {
+            el.innerHTML = `<p class="text-sm text-gray-600 mb-3 text-center">Betrachtet wird <strong>${m.hint}</strong> Bestimme die Oxidationszahl selbst — prüfe dann.</p>
+                <div class="flex gap-2 max-w-sm mx-auto">
+                    <input id="molInput" type="text" autocomplete="off" placeholder="z. B. -1" onkeydown="if(event.key==='Enter')checkMol()" class="oz-input flex-1 min-w-0 bg-white border-2 border-gray-300 rounded-xl p-3 font-bold text-lg">
+                    <button onclick="checkMol()" class="btn-tap flex-shrink-0 bg-primary hover:bg-[#2f6137] text-white font-bold px-4 sm:px-6 rounded-xl">Prüfen</button>
+                </div><div id="molFb" class="mt-4"></div>`;
+            return;
+        }
+        el.innerHTML = molTable(m, sum);
+        lucide.createIcons();
+    }
+    function molTable(m, sum) {
+        return `<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white reveal-anim">
+            <table class="w-full text-left border-collapse text-sm min-w-[420px]">
+                <thead><tr class="bg-gray-100 text-gray-700 border-b-2 border-gray-300"><th class="p-3 font-bold">Bindung</th><th class="p-3 font-bold">Begründung über die EN</th><th class="p-3 font-bold text-right">Beitrag</th></tr></thead>
+                <tbody>
+                    ${m.subs.map(s => `<tr class="border-b border-gray-100">
+                        <td class="p-3 formula font-bold">C${s.dbl ? '=' : '–'}${s.lab.replace('–H', '').replace('CH₃', 'C')}</td>
+                        <td class="p-3 text-gray-600 text-xs">${s.b.note}</td>
+                        <td class="p-3 text-right formula font-bold ${s.b.contrib > 0 ? 'text-blue-600' : s.b.contrib < 0 ? 'text-red-600' : 'text-gray-500'}">${s.b.contrib > 0 ? '+' : ''}${s.b.contrib}</td></tr>`).join('')}
+                    <tr class="bg-light"><td class="p-3 font-bold text-[#2f6137]" colspan="2">Summe = Oxidationszahl des C-Atoms</td>
+                        <td class="p-3 text-right formula font-bold text-[#2f6137] text-lg">${toRoman(sum)}</td></tr>
+                </tbody>
+            </table></div>
+            <button onclick="molRevealed=false; molIdx=(molIdx+1)%MOLECULES.length; document.getElementById('molSelect').value=molIdx; drawMolecule(); renderMolBody();" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Nächstes Molekül</button>`;
+    }
+    function checkMol() {
+        const m = MOLECULES[molIdx], sum = m.subs.reduce((a, s) => a + s.b.contrib, 0);
+        const val = parseOZ(document.getElementById('molInput').value);
+        if (val === null) { document.getElementById('molFb').innerHTML = `<div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">Bitte eine Zahl eingeben, z. B. <span class="formula font-bold">−1</span>.</div>`; return; }
+        const ok = val === sum;
+        molRevealed = true;
+        document.getElementById('molBody').innerHTML =
+            fb(ok, ok ? `Richtig — OZ(C) = ${toRoman(sum)}` : `Nicht ganz. Richtig ist OZ(C) = ${toRoman(sum)}`, 'So setzt sich die Oxidationszahl aus den einzelnen Bindungen zusammen:') +
+            `<div class="mt-3">${molTable(m, sum)}</div>`;
+        lucide.createIcons();
+    }
+
+    // ================== MINI-QUIZ REDOX JA/NEIN ==================
+    const RJN = [
+        { t: 'Zn + 2 HCl → ZnCl₂ + H₂', a: true, e: 'Redoxreaktion: Zink wird von 0 auf +II oxidiert, Wasserstoff von +I auf 0 reduziert.' },
+        { t: 'CaCO₃ + 2 HCl → CaCl₂ + H₂O + CO₂', a: false, e: 'Keine Redoxreaktion: Keine einzige Oxidationszahl ändert sich. Es handelt sich um eine Säure-Base-Reaktion.' },
+        { t: 'Cu + 2 H₂SO₄ → CuSO₄ + 2 H₂O + SO₂', a: true, e: 'Redoxreaktion: Kupfer wird von 0 auf +II oxidiert, ein Schwefel-Atom von +VI auf +IV reduziert.' },
+        { t: 'Ethanol → Ethansäure', a: true, e: 'Redoxreaktion: Die OZ des betrachteten C-Atoms steigt von −I auf +III.' },
+        { t: 'Ethansäure + Ethanol → Ester + Wasser (Veresterung)', a: false, e: 'Keine Redoxreaktion: Die Oxidationszahl des betreffenden C-Atoms bleibt +III. Nicht jede organische Reaktion ist eine Redoxreaktion!' },
+        { t: 'NaOH + HCl → NaCl + H₂O', a: false, e: 'Keine Redoxreaktion: Hier wird ein Proton übertragen, kein Elektron — eine Säure-Base-Reaktion.' },
+        { t: 'Methanol → Methanal', a: true, e: 'Redoxreaktion: Die OZ des C-Atoms steigt von −II auf 0.' },
+        { t: 'Mg + Br₂ → MgBr₂', a: true, e: 'Redoxreaktion: Mg wird von 0 auf +II oxidiert, Brom von 0 auf −I reduziert.' }
+    ];
+    let rjnShuffled = [], rjnIdx = 0;
+    function renderRedoxJaNeinQuiz() { rjnShuffled = [...RJN].sort(() => Math.random() - .5); rjnIdx = 0; showRjn(); }
+    function showRjn() {
+        const it = rjnShuffled[rjnIdx % rjnShuffled.length];
+        document.getElementById('redoxJaNeinQuizArea').innerHTML = `
+            <p class="text-sm text-gray-600 mb-3">Ändert sich hier eine Oxidationszahl?</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4"><p class="formula font-bold text-gray-800 text-sm md:text-base">${it.t}</p></div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="checkRjn(true)" class="btn-tap bg-light hover:brightness-95 text-[#2f6137] font-bold py-3 rounded-xl border-2 border-[#dfeae3]">Redoxreaktion</button>
+                <button onclick="checkRjn(false)" class="btn-tap bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl border-2 border-gray-300">Keine Redoxreaktion</button>
+            </div><div id="rjnFb" class="mt-4"></div>`;
+    }
+    function checkRjn(a) {
+        const it = rjnShuffled[rjnIdx % rjnShuffled.length];
+        document.getElementById('rjnFb').innerHTML = fb(a === it.a, a === it.a ? 'Richtig!' : 'Leider falsch.', it.e) +
+            `<button onclick="rjnIdx++; showRjn();" class="btn-tap mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl">Nächstes Beispiel</button>`;
+        lucide.createIcons();
+    }
+    // ================== REDOXGLEICHUNGS-TRAINER ==================
+    const GL_REACTIONS = [
+        {
+            title: 'Sulfit + Permanganat in saurer Lösung', milieu: 'sauer', particle: 'H₃O⁺',
+            ox: { from: 'SO₃²⁻', fromOZ: '+IV', to: 'SO₄²⁻', toOZ: '+VI', half: 'SO₃²⁻ → SO₄²⁻ + 2 e⁻', factor: 5, scaled: '5 SO₃²⁻ → 5 SO₄²⁻ + 10 e⁻', ez: 2 },
+            red: { from: 'MnO₄⁻', fromOZ: '+VII', to: 'Mn²⁺', toOZ: '+II', half: 'MnO₄⁻ + 5 e⁻ → Mn²⁺', factor: 2, scaled: '2 MnO₄⁻ + 10 e⁻ → 2 Mn²⁺', ez: 5 },
+            kgv: 10, sum: '5 SO₃²⁻ + 2 MnO₄⁻ → 5 SO₄²⁻ + 2 Mn²⁺',
+            cL: '5·(−2) + 2·(−1) = −12', cR: '5·(−2) + 2·(+2) = −6', add: '6 H₃O⁺ auf die linke Seite',
+            afterCharge: '5 SO₃²⁻ + 2 MnO₄⁻ + 6 H₃O⁺ → 5 SO₄²⁻ + 2 Mn²⁺',
+            waterNote: 'Die 6 H₃O⁺ bringen links 18 H- und 6 zusätzliche O-Atome mit; sie erscheinen rechts als 9 H₂O.',
+            water: '9 H₂O rechts', final: '5 SO₃²⁻ + 2 MnO₄⁻ + 6 H₃O⁺ → 5 SO₄²⁻ + 2 Mn²⁺ + 9 H₂O'
+        },
+        {
+            title: 'Sulfit + Permanganat in stark alkalischer Lösung', milieu: 'alkalisch', particle: 'OH⁻',
+            ox: { from: 'SO₃²⁻', fromOZ: '+IV', to: 'SO₄²⁻', toOZ: '+VI', half: 'SO₃²⁻ → SO₄²⁻ + 2 e⁻', factor: 1, scaled: 'SO₃²⁻ → SO₄²⁻ + 2 e⁻', ez: 2 },
+            red: { from: 'MnO₄⁻', fromOZ: '+VII', to: 'MnO₄²⁻', toOZ: '+VI', half: 'MnO₄⁻ + e⁻ → MnO₄²⁻', factor: 2, scaled: '2 MnO₄⁻ + 2 e⁻ → 2 MnO₄²⁻', ez: 1 },
+            kgv: 2, sum: 'SO₃²⁻ + 2 MnO₄⁻ → SO₄²⁻ + 2 MnO₄²⁻',
+            cL: '1·(−2) + 2·(−1) = −4', cR: '1·(−2) + 2·(−2) = −6', add: '2 OH⁻ auf die linke Seite',
+            afterCharge: 'SO₃²⁻ + 2 MnO₄⁻ + 2 OH⁻ → SO₄²⁻ + 2 MnO₄²⁻',
+            waterNote: 'Links stehen nun 2 H- und ein O-Atom mehr als rechts; sie erscheinen rechts als 1 H₂O.',
+            water: '1 H₂O rechts', final: 'SO₃²⁻ + 2 MnO₄⁻ + 2 OH⁻ → SO₄²⁻ + 2 MnO₄²⁻ + H₂O'
+        }
+    ];
+    const GL_LABELS = ['1. Oxidationszahlen zuordnen', '2. Teilgleichungen & Elektronenausgleich', '3a. Teilgleichungen zusammenführen', '3b. Ladungen ausgleichen', '3c. Atombilanz mit H₂O'];
+    let glIdx = 0, glStep = 0, glMilieuAnswered = false;
+    function renderGlTrainer() {
+        document.getElementById('glTrainerContainer').innerHTML = `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-6">
+                <select id="glSelect" onchange="onGlChange()" class="w-full bg-white border border-gray-200 text-gray-800 rounded-xl p-3 mb-3 outline-none focus:ring-2 focus:ring-primary transition">
+                    ${GL_REACTIONS.map((r, i) => `<option value="${i}">${r.title}</option>`).join('')}
+                </select>
+                <div id="glBadge" class="mb-4"></div>
+                <div class="flex gap-1.5 mb-5">${GL_LABELS.map((_, i) => `<div id="glBar${i}" class="h-2 flex-1 rounded-full bg-gray-200 transition-colors duration-500"></div>`).join('')}</div>
+                <div id="glSteps"></div>
+            </div>`;
+        renderGlStep();
+    }
+    function onGlChange() { glIdx = +document.getElementById('glSelect').value; glStep = 0; glMilieuAnswered = false; renderGlStep(); }
+    function glNext() { glStep++; renderGlStep(); }
+    function renderGlStep() {
+        const r = GL_REACTIONS[glIdx], acid = r.milieu === 'sauer';
+        document.getElementById('glBadge').innerHTML =
+            `<span class="inline-block px-3 py-1 rounded-full text-xs font-bold ${acid ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}">${acid ? 'Saure Lösung' : 'Alkalische Lösung'}</span>`;
+        for (let i = 0; i < 5; i++) document.getElementById('glBar' + i).className = 'h-2 flex-1 rounded-full transition-colors duration-500 ' + (glStep > i ? 'bg-primary' : 'bg-gray-200');
+        const box = (n, title, inner, done) => `<div class="mb-3 reveal-anim"><div class="flex items-start gap-2.5 mb-2">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full ${done ? 'bg-primary' : 'bg-gray-400'} text-white text-xs font-bold flex items-center justify-center mt-0.5">${n}</span>
+            <h4 class="font-bold text-gray-700 text-sm">${title}</h4></div><div class="ml-8.5" style="margin-left:2.1rem">${inner}</div></div>`;
+        let h = '';
+        if (glStep >= 1) h += box('1', GL_LABELS[0], `<div class="grid md:grid-cols-2 gap-3">
+            <div class="bg-red-50 border border-red-200 p-3 rounded-xl"><p class="text-[11px] font-bold text-red-700 uppercase mb-1">Oxidation · OZ steigt</p>
+                <p class="formula font-bold text-red-900 text-sm">${r.ox.from} <span class="text-xs">(${r.ox.fromOZ})</span> → ${r.ox.to} <span class="text-xs">(${r.ox.toOZ})</span></p></div>
+            <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl"><p class="text-[11px] font-bold text-blue-700 uppercase mb-1">Reduktion · OZ sinkt</p>
+                <p class="formula font-bold text-blue-900 text-sm">${r.red.from} <span class="text-xs">(${r.red.fromOZ})</span> → ${r.red.to} <span class="text-xs">(${r.red.toOZ})</span></p></div></div>`, true);
+        if (glStep >= 2) h += box('2', GL_LABELS[1], `<div class="grid md:grid-cols-2 gap-3">
+            <div class="bg-red-50 border border-red-200 p-3 rounded-xl formula text-sm text-red-900 space-y-1">
+                <p>${r.ox.half}</p><p class="font-bold"><span class="bg-red-200 px-1 rounded">·${r.ox.factor}</span> ${r.ox.scaled}</p></div>
+            <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl formula text-sm text-blue-900 space-y-1">
+                <p>${r.red.half}</p><p class="font-bold"><span class="bg-blue-200 px-1 rounded">·${r.red.factor}</span> ${r.red.scaled}</p></div></div>
+            <p class="text-xs text-gray-500 mt-2">Abgegeben ${r.ox.ez} e⁻, aufgenommen ${r.red.ez} e⁻ → kgV = <strong>${r.kgv}</strong> → Faktoren ${r.ox.factor} und ${r.red.factor}.</p>`, true);
+        if (glStep >= 3) h += box('3a', GL_LABELS[2], `<p class="formula font-bold text-center bg-white p-3 rounded-xl border border-gray-200 text-sm">${r.sum}</p>
+            <p class="text-xs text-gray-500 mt-1.5 text-center">Die ${r.kgv} Elektronen kürzen sich auf beiden Seiten weg.</p>`, true);
+        if (glStep >= 4) h += box('3b', GL_LABELS[3], `<div class="grid grid-cols-2 gap-2 mb-2 text-xs">
+                <div class="bg-white border border-gray-200 rounded-lg p-2 text-center"><span class="text-gray-500">Ladung links</span><br><span class="formula font-bold">${r.cL}</span></div>
+                <div class="bg-white border border-gray-200 rounded-lg p-2 text-center"><span class="text-gray-500">Ladung rechts</span><br><span class="formula font-bold">${r.cR}</span></div></div>
+            <p class="text-xs text-gray-600 mb-2">Ausgleich mit <strong class="formula ${r.milieu === 'sauer' ? 'text-red-700' : 'text-blue-700'}">${r.particle}</strong>: ${r.add}</p>
+            <p class="formula font-bold text-center bg-white p-3 rounded-xl border border-gray-200 text-sm">${r.afterCharge}</p>`, true);
+        if (glStep >= 5) h += box('3c', GL_LABELS[4], `<p class="text-xs text-gray-600 mb-2">${r.waterNote} → <strong>${r.water}</strong></p>
+            <p class="formula font-bold text-center bg-light p-4 rounded-xl border-2 border-primary text-primary text-sm md:text-base">${r.final}</p>`, true);
+
+        if (glStep === 3 && !glMilieuAnswered) {
+            h += `<div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mt-2 reveal-anim">
+                <p class="text-sm font-bold text-amber-900 mb-3">Selbstcheck: Womit werden die Ladungen in <strong>${r.milieu === 'sauer' ? 'saurer' : 'alkalischer'}</strong> Lösung ausgeglichen?</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="checkGlMilieu('H₃O⁺')" class="btn-tap bg-white hover:bg-red-50 border-2 border-red-200 text-red-700 font-bold py-2.5 rounded-xl formula">H₃O⁺</button>
+                    <button onclick="checkGlMilieu('OH⁻')" class="btn-tap bg-white hover:bg-blue-50 border-2 border-blue-200 text-blue-700 font-bold py-2.5 rounded-xl formula">OH⁻</button>
+                </div><div id="glMilieuFb" class="mt-3"></div></div>`;
+        } else if (glStep < 5) {
+            h += `<button onclick="glNext()" class="btn-tap w-full mt-2 bg-primary hover:bg-[#2f6137] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2">Nächster Schritt <i data-lucide="arrow-right" class="w-4 h-4"></i></button>`;
+        } else {
+            h += `<button onclick="glIdx=(glIdx+1)%GL_REACTIONS.length; document.getElementById('glSelect').value=glIdx; glStep=0; glMilieuAnswered=false; renderGlStep();" class="btn-tap w-full mt-2 bg-gray-800 hover:bg-gray-900 text-white py-3 rounded-xl font-bold">Anderes Milieu ansehen</button>`;
+        }
+        document.getElementById('glSteps').innerHTML = h;
+        lucide.createIcons();
+    }
+    function checkGlMilieu(a) {
+        const r = GL_REACTIONS[glIdx], ok = a === r.particle;
+        glMilieuAnswered = true;
+        document.getElementById('glMilieuFb').innerHTML = fb(ok, ok ? 'Richtig!' : 'Falsch.',
+            `In ${r.milieu === 'sauer' ? 'saurer' : 'alkalischer'} Lösung wird mit <strong class="formula">${r.particle}</strong> ausgeglichen.`) +
+            `<button onclick="glNext()" class="btn-tap w-full mt-3 bg-primary hover:bg-[#2f6137] text-white py-2.5 rounded-xl font-bold">Weiter</button>`;
+        lucide.createIcons();
+    }
+
+    // ================== FEHLER FINDEN ==================
+    const FEHLER = [
+        { ctx: 'Ameisensäure (HCOOH) reagiert mit Permanganat-Ionen in <strong>saurer</strong> Lösung zu CO₂ und Mn²⁺.',
+          wrong: '3 HCOOH + 2 MnO₄⁻ + 6 H₃O⁺ → 3 CO₂ + 2 Mn²⁺ + 14 H₂O',
+          hint: 'Prüfe zuerst die Elektronenbilanz. HCOOH gibt 2 e⁻ ab (C: +II → +IV), MnO₄⁻ nimmt 5 e⁻ auf. Welches kgV ergibt sich daraus?',
+          sol: 'Der <strong>Faktor der Oxidation</strong> ist falsch. Das kgV von 2 und 5 ist <strong>10</strong>, nicht 6 — es müssen also <strong>5</strong> HCOOH und <strong>5</strong> CO₂ sein, nicht 3.',
+          right: '5 HCOOH + 2 MnO₄⁻ + 6 H₃O⁺ → 5 CO₂ + 2 Mn²⁺ + 14 H₂O' },
+        { ctx: 'Sulfit-Ionen reagieren mit Permanganat-Ionen in <strong>alkalischer</strong> Lösung zu Sulfat- und Manganat-Ionen.',
+          wrong: 'SO₃²⁻ + 2 MnO₄⁻ + 2 H₃O⁺ → SO₄²⁻ + 2 MnO₄²⁻ + H₂O',
+          hint: 'Welches Teilchen darf in alkalischer Lösung zum Ladungsausgleich verwendet werden? Rechne zur Kontrolle die Ladungen beider Seiten nach.',
+          sol: 'Das <strong>Ausgleichsteilchen</strong> ist falsch: In alkalischer Lösung wird mit <strong>OH⁻</strong> ausgeglichen, nicht mit H₃O⁺. Mit H₃O⁺ stimmt die Ladungsbilanz auch gar nicht (links −2, rechts −6).',
+          right: 'SO₃²⁻ + 2 MnO₄⁻ + 2 OH⁻ → SO₄²⁻ + 2 MnO₄²⁻ + H₂O' },
+        { ctx: 'Eisen(II)-Ionen reagieren mit Permanganat-Ionen in <strong>saurer</strong> Lösung zu Fe³⁺ und Mn²⁺.',
+          wrong: '5 Fe²⁺ + MnO₄⁻ + 8 H₃O⁺ → 5 Fe³⁺ + Mn²⁺ + 8 H₂O',
+          hint: 'Elektronen- und Ladungsbilanz stimmen hier bereits. Zähle einmal die H- und die O-Atome auf beiden Seiten.',
+          sol: 'Die <strong>Atombilanz</strong> stimmt nicht. Links stehen 24 H-Atome (aus 8 H₃O⁺) und 12 O-Atome (4 aus MnO₄⁻ + 8 aus H₃O⁺). Rechts liefern 8 H₂O nur 16 H und 8 O — es müssen <strong>12 H₂O</strong> sein.',
+          right: '5 Fe²⁺ + MnO₄⁻ + 8 H₃O⁺ → 5 Fe³⁺ + Mn²⁺ + 12 H₂O' }
+    ];
+    function renderFehler() {
+        document.getElementById('fehlerContainer').innerHTML = FEHLER.map((f, i) => `
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5 mb-4">
+                <p class="text-sm text-gray-700 mb-3">${String.fromCharCode(97 + i)}) ${f.ctx}</p>
+                <div class="bg-red-50 border-2 border-red-200 rounded-xl p-3.5 text-center formula font-bold mb-3 text-sm md:text-base overflow-x-auto">${f.wrong}</div>
+                <div class="flex flex-col gap-2">
+                    <details class="group bg-blue-50 rounded-xl border border-blue-100 hint-accordion">
+                        <summary class="flex justify-between items-center font-bold cursor-pointer p-3 text-sm text-blue-700 hover:bg-blue-100 rounded-xl transition"><span><i data-lucide="lightbulb" class="inline w-4 h-4 mr-2"></i>Tipp</span><i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i></summary>
+                        <div class="p-3 pt-0 text-sm text-blue-900 border-t border-blue-100/50 mt-1">${f.hint}</div>
+                    </details>
+                    <details class="group bg-green-50 rounded-xl border border-green-200 hint-accordion">
+                        <summary class="flex justify-between items-center font-bold cursor-pointer p-3.5 text-green-800 hover:bg-green-100 rounded-xl transition"><span><i data-lucide="check-circle" class="inline w-5 h-5 mr-2"></i>Lösung</span><i data-lucide="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180"></i></summary>
+                        <div class="p-4 pt-0 text-green-900 border-t border-green-200/50 mt-2 text-sm leading-relaxed">${f.sol}
+                            <p class="formula font-bold bg-white p-3 rounded-lg mt-3 text-center overflow-x-auto">${f.right}</p></div>
+                    </details>
+                </div>
+            </div>`).join('');
+        lucide.createIcons();
+    }
+
+    // ================== MANGAN-OXIDATIONSSTUFEN ==================
+    const MN_STATES = [
+        { oz: '+VII', f: 'MnO₄⁻', c: '#8b1a8b', n: 'Permanganat-Ion', d: 'Tiefviolette Lösung. Ein sehr starkes Oxidationsmittel — es kann bis zu 5 Elektronen aufnehmen.' },
+        { oz: '+VI', f: 'MnO₄²⁻', c: '#2e7d32', n: 'Manganat-Ion', d: 'Grüne Lösung. Entsteht, wenn Permanganat in stark alkalischer Lösung nur ein einziges Elektron aufnimmt.' },
+        { oz: '+IV', f: 'MnO₂', c: '#6d4c2c', n: 'Braunstein (Mangan(IV)-oxid)', d: 'Brauner, schwerlöslicher Feststoff. Entsteht, wenn Permanganat in neutraler bis schwach alkalischer Lösung 3 Elektronen aufnimmt. Kann selbst als Oxidationsmittel wirken.' },
+        { oz: '+II', f: 'Mn²⁺', c: '#f2ece6', n: 'Mangan(II)-Ion', d: 'Nahezu farblose Lösung. Die stabile Endstufe, zu der Permanganat in saurer Lösung reduziert wird.' }
+    ];
+    let mnIdx = 0;
+    function renderMnLadder() {
+        document.getElementById('mnLadderContainer').innerHTML = `
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                ${MN_STATES.map((s, i) => `<button onclick="setMn(${i})" id="mnBtn${i}" class="btn-tap p-3 rounded-2xl border-2 font-bold text-sm transition-all ${i === 0 ? 'border-primary bg-light' : 'border-gray-200 bg-white'}">
+                    <div class="w-9 h-9 rounded-full mx-auto mb-1.5 border border-gray-300 shadow-sm" style="background:${s.c}"></div>
+                    <span class="formula">Mn (${s.oz})</span></button>`).join('')}
+            </div>
+            <div id="mnDetail"></div>`;
+        renderMnDetail();
+    }
+    function setMn(i) {
+        mnIdx = i;
+        MN_STATES.forEach((_, k) => { document.getElementById('mnBtn' + k).className = 'btn-tap p-3 rounded-2xl border-2 font-bold text-sm transition-all ' + (k === i ? 'border-primary bg-light' : 'border-gray-200 bg-white'); });
+        renderMnDetail();
+    }
+    function renderMnDetail() {
+        const s = MN_STATES[mnIdx];
+        document.getElementById('mnDetail').innerHTML = `
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-5 pop-anim">
+                <div class="w-16 h-16 rounded-full flex-shrink-0 border-4 border-white shadow-md ring-1 ring-gray-200" style="background:${s.c}"></div>
+                <div><h4 class="font-bold text-gray-800 text-lg formula">${s.f} <span class="text-gray-400 font-normal text-sm">(Mn: ${s.oz})</span></h4>
+                    <p class="text-sm font-bold text-gray-500 mb-1">${s.n}</p>
+                    <p class="text-sm text-gray-600">${s.d}</p></div>
+            </div>`;
+    }
+
+    // ================== PERMANGANAT + EISEN(II) ==================
+    function renderMnFeDerivation() {
+        document.getElementById('mnFeDerivation').innerHTML = `
+            <div class="space-y-3">
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                    <p class="text-sm font-bold text-gray-700 mb-2"><span class="text-primary">1.</span> Oxidationszahlen zuordnen</p>
+                    <div class="grid md:grid-cols-2 gap-3">
+                        <div class="bg-red-50 border border-red-200 p-3 rounded-xl"><p class="text-[11px] font-bold text-red-700 uppercase mb-1">Oxidation</p><p class="formula font-bold text-red-900 text-sm">Fe²⁺ (+II) → Fe³⁺ (+III)</p></div>
+                        <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl"><p class="text-[11px] font-bold text-blue-700 uppercase mb-1">Reduktion</p><p class="formula font-bold text-blue-900 text-sm">MnO₄⁻ (+VII) → Mn²⁺ (+II)</p></div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                    <p class="text-sm font-bold text-gray-700 mb-2"><span class="text-primary">2.</span> Teilgleichungen mit Elektronenausgleich</p>
+                    <div class="grid md:grid-cols-2 gap-3">
+                        <div class="bg-red-50 border border-red-200 p-3 rounded-xl formula text-sm text-red-900 space-y-1"><p>Fe²⁺ → Fe³⁺ + e⁻</p><p class="font-bold"><span class="bg-red-200 px-1 rounded">·5</span> 5 Fe²⁺ → 5 Fe³⁺ + 5 e⁻</p></div>
+                        <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl formula text-sm text-blue-900 space-y-1"><p>MnO₄⁻ + 5 e⁻ → Mn²⁺</p><p class="font-bold"><span class="bg-blue-200 px-1 rounded">·1</span> MnO₄⁻ + 5 e⁻ → Mn²⁺</p></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Fe²⁺ gibt nur 1 e⁻ ab, MnO₄⁻ nimmt 5 e⁻ auf → kgV = <strong>5</strong>. Deshalb reagieren <strong>5 Fe²⁺ pro MnO₄⁻</strong>.</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                    <p class="text-sm font-bold text-gray-700 mb-2"><span class="text-primary">3a)</span> Teilgleichungen zusammenführen</p>
+                    <p class="formula font-bold text-center bg-white p-3 rounded-lg border border-gray-200 text-sm">5 Fe²⁺ + MnO₄⁻ → 5 Fe³⁺ + Mn²⁺</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                    <p class="text-sm font-bold text-gray-700 mb-2"><span class="text-primary">3b)</span> Ladungen ausgleichen mit <span class="formula text-red-700">H₃O⁺</span></p>
+                    <p class="text-xs text-gray-500 mb-2">Links: 5·(+2) + (−1) = <strong>+9</strong> · Rechts: 5·(+3) + (+2) = <strong>+17</strong> → 8 H₃O⁺ nach links.</p>
+                    <p class="formula font-bold text-center bg-white p-3 rounded-lg border border-gray-200 text-sm">5 Fe²⁺ + MnO₄⁻ + 8 H₃O⁺ → 5 Fe³⁺ + Mn²⁺</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                    <p class="text-sm font-bold text-gray-700 mb-2"><span class="text-primary">3c)</span> Atombilanz mit <span class="formula text-blue-700">H₂O</span></p>
+                    <p class="text-xs text-gray-500 mb-2">Links 24 H- und 12 O-Atome → rechts als 12 H₂O ergänzen.</p>
+                    <p class="formula font-bold text-center bg-light p-4 rounded-xl border-2 border-primary text-primary text-sm md:text-base">5 Fe²⁺ + MnO₄⁻ + 8 H₃O⁺ → 5 Fe³⁺ + Mn²⁺ + 12 H₂O</p>
+                </div>
+            </div>`;
+    }
+    // ================== KLAUSURAUFGABEN ==================
+    const EXAM = [
+        { title: 'Aufgabe 1: Redoxreihe und Donator-Akzeptor-Konzept', icon: 'repeat', parts: [
+            { q: 'Ein Silber-Blech wird in eine Eisen(II)-sulfat-Lösung gelegt. Entscheiden Sie, ob eine Reaktion stattfindet, und begründen Sie mithilfe der Redoxreihe.',
+              hints: [{ t: 'Tipp', c: 'Wo stehen Silber und Eisen in der Redoxreihe zueinander?' }],
+              sol: 'Es findet <strong>keine</strong> Reaktion statt. Silber steht in der Redoxreihe unter Eisen, ist also das schwächere Reduktionsmittel. Silber-Atome können Fe²⁺-Ionen nicht reduzieren — nur ein Metall-Atom kann die Ionen des <em>unter</em> ihm stehenden Metalls reduzieren.' },
+            { q: 'Formulieren Sie für die Reaktion von Zink mit einer Silbernitrat-Lösung die Teilgleichungen für Oxidation und Reduktion sowie die Gesamtgleichung. Geben Sie die korrespondierenden Redoxpaare an und ordnen Sie die Begriffe Oxidations- und Reduktionsmittel zu.',
+              hints: [{ t: 'Tipp', c: 'Achte auf die unterschiedliche Elektronenanzahl: Zn gibt 2 e⁻ ab, Ag⁺ nimmt nur 1 e⁻ auf.' }],
+              sol: 'Oxidation: Zn → Zn²⁺ + 2 e⁻<br>Reduktion: Ag⁺ + e⁻ → Ag &nbsp;| ·2 → 2 Ag⁺ + 2 e⁻ → 2 Ag<br>Gesamt: <strong>Zn + 2 Ag⁺ → Zn²⁺ + 2 Ag</strong><br><br>Redoxpaare: Zn/Zn²⁺ und Ag/Ag⁺.<br>Zink ist das <strong>Reduktionsmittel</strong> (Elektronendonator, wird oxidiert), Ag⁺ ist das <strong>Oxidationsmittel</strong> (Elektronenakzeptor, wird reduziert).' },
+            { q: 'Zu einer Kaliumbromid-Lösung wird Chlorwasser gegeben. Erklären Sie mithilfe der Redoxreihe der Nichtmetalle, was zu beobachten ist.',
+              hints: [],
+              sol: 'Bromid steht in der Redoxreihe der Nichtmetalle über Chlor. Bromid-Ionen können Chlor-Moleküle daher reduzieren: <strong>2 Br⁻ + Cl₂ → Br₂ + 2 Cl⁻</strong>. Beobachtung: Die Lösung färbt sich durch entstehendes Brom braun.' }
+        ]},
+        { title: 'Aufgabe 2: Oxidationszahlen', icon: 'hash', parts: [
+            { q: 'Bestimmen Sie die Oxidationszahlen aller Atome in Kaliumdichromat (K₂Cr₂O₇).',
+              hints: [{ t: 'Tipp', c: 'Regel 2 (Metall positiv) und Regel 5 (O = −II) zuerst anwenden, dann die Summenregel für Chrom.' }],
+              sol: 'Regel 2: K = <strong>+I</strong> (2 Atome → +II)<br>Regel 5: O = <strong>−II</strong> (7 Atome → −XIV)<br>Regel 1: (+II) + 2·OZ(Cr) + (−XIV) = 0 → 2·OZ(Cr) = +XII → <strong>OZ(Cr) = +VI</strong>' },
+            { q: 'Bestimmen Sie die Oxidationszahl des Sauerstoff-Atoms in H₂O₂ und in OF₂. Erklären Sie, warum sie in beiden Fällen von der üblichen Oxidationszahl abweicht.',
+              hints: [{ t: 'Tipp', c: 'Welche Regel hat jeweils Vorrang vor Regel 5?' }],
+              sol: '<strong>H₂O₂:</strong> Regel 4 (H = +I) hat Vorrang vor Regel 5. 2·(+I) + 2·OZ(O) = 0 → OZ(O) = <strong>−I</strong> (Peroxid).<br><br><strong>OF₂:</strong> Regel 3 (F = −I) hat Vorrang vor Regel 5. OZ(O) + 2·(−I) = 0 → OZ(O) = <strong>+II</strong>.<br><br>Begründung: Die Regeln gelten in Prioritätsreihenfolge — Regeln mit niedrigerer Nummer setzen sich durch. Regel 5 („Sauerstoff meist −II") ist die schwächste der beteiligten Regeln.' },
+            { q: 'Entscheiden Sie jeweils, ob eine Redoxreaktion oder eine Säure-Base-Reaktion vorliegt. Begründen Sie mit Oxidationszahlen.<br>a) Cu + 2 H₂SO₄ → CuSO₄ + 2 H₂O + SO₂<br>b) CaCO₃ + 2 HCl → CaCl₂ + H₂O + CO₂<br>c) Zn + 2 HCl → ZnCl₂ + H₂',
+              hints: [],
+              sol: '<strong>a) Redoxreaktion:</strong> Cu wird von 0 auf +II oxidiert; ein S-Atom wird von +VI (in H₂SO₄) auf +IV (in SO₂) reduziert.<br><br><strong>b) Säure-Base-Reaktion:</strong> Keine Oxidationszahl ändert sich (Ca +II, C +IV, O −II, H +I, Cl −I bleiben gleich). Übertragen werden Protonen.<br><br><strong>c) Redoxreaktion:</strong> Zn wird von 0 auf +II oxidiert, H von +I auf 0 reduziert.' },
+            { q: 'Bestimmen Sie die Oxidationszahl des markierten C-Atoms in Ethanol (CH₃–<u>C</u>H₂OH) und in Ethansäure (CH₃–<u>C</u>OOH). Begründen Sie über die Elektronegativitäten und erklären Sie, ob die Umwandlung eine Redoxreaktion ist.',
+              hints: [{ t: 'Tipp', c: 'Zähle die Bindungen des markierten C-Atoms einzeln. C–H zählt −1, C–O zählt +1, C=O zählt +2, C–C zählt 0.' }],
+              sol: '<strong>Ethanol:</strong> 1× C–C (0) + 2× C–H (2·(−1)) + 1× C–O (+1) = <strong>−I</strong><br><strong>Ethansäure:</strong> 1× C–C (0) + 1× C=O (+2) + 1× C–O (+1) = <strong>+III</strong><br><br>Begründung: In C–H ist Kohlenstoff mit EN 2,55 elektronegativer als H (2,20) und erhält das bindende Elektronenpaar formal zugeteilt (−1). In C–O ist Sauerstoff mit EN 3,44 elektronegativer und erhält das Elektronenpaar (+1 für C). Bei C–C ist die EN gleich, das Paar wird geteilt (0).<br><br>Die Oxidationszahl steigt von −I auf +III — es handelt sich also um eine <strong>Redoxreaktion</strong> (Oxidation).' },
+            { q: 'Bei der Veresterung reagiert Ethansäure mit Ethanol zu Ester und Wasser. Beurteilen Sie, ob es sich um eine Redoxreaktion handelt, und erklären Sie, warum diese Frage nicht allein aus dem Reaktionstyp beantwortet werden kann.',
+              hints: [],
+              sol: 'Es ist <strong>keine</strong> Redoxreaktion. Die Oxidationszahl des Carboxyl-C-Atoms bleibt bei +III, auch im Ester (1× C–C = 0, 1× C=O = +2, 1× C–O = +1). Auch am Alkohol-C-Atom ändert sich nichts.<br><br>Die Frage lässt sich nicht am Reaktionstyp ablesen: Auch organische Reaktionen können, müssen aber keine Redoxreaktionen sein. Entscheidend ist immer die <strong>Prüfung der Oxidationszahlen</strong> — eine bloße Musterübertragung („organisch = Redox") führt in die Irre.' }
+        ]},
+        { title: 'Aufgabe 5: Mangan und der Einfluss des Milieus', icon: 'beaker', parts: [
+            { q: 'Permanganat-Ionen reagieren in saurer Lösung zu Mn²⁺, in stark alkalischer Lösung dagegen zu MnO₄²⁻. Erklären Sie, worin die Besonderheit des Mangans besteht, und geben Sie für beide Fälle die Anzahl der aufgenommenen Elektronen an.',
+              hints: [],
+              sol: 'Die Atome vieler Elemente können unterschiedliche Oxidationszahlen annehmen; bei Mangan ist das besonders ausgeprägt. Es existieren mehrere stabile Oxidationsstufen (u. a. +VII, +VI, +IV, +II), die sich auch farblich unterscheiden. Ein Hauptgruppenmetall wie Magnesium bildet dagegen praktisch nur eine Oxidationsstufe.<br><br><strong>Sauer:</strong> MnO₄⁻ (+VII) → Mn²⁺ (+II), Aufnahme von <strong>5 e⁻</strong> (violett → nahezu farblos).<br><strong>Stark alkalisch:</strong> MnO₄⁻ (+VII) → MnO₄²⁻ (+VI), Aufnahme von <strong>1 e⁻</strong> (violett → grün).' },
+            { q: 'Erläutern Sie, warum beim Aufstellen einer Redoxgleichung das Milieu bekannt sein muss, bevor man mit Schritt 1 beginnt.',
+              hints: [],
+              sol: 'Das Milieu bestimmt zweierlei: Erstens, <strong>welches Produkt</strong> überhaupt entsteht (MnO₄⁻ → Mn²⁺ im Sauren, → MnO₄²⁻ im stark Alkalischen). Damit ändert sich auch die Anzahl der übertragenen Elektronen und folglich das kgV und alle Faktoren. Zweitens legt es fest, <strong>welches Ausgleichsteilchen</strong> in Schritt 3b erlaubt ist: H₃O⁺ in saurer, OH⁻ in alkalischer Lösung. Ohne diese Information ist bereits Schritt 1 nicht eindeutig lösbar.' }
+        ]},
+        { title: 'Aufgabe 6: Analogie Redox ↔ Säure-Base', icon: 'arrow-left-right', parts: [
+            { q: 'Stellen Sie die Analogie zwischen Redox- und Säure-Base-Reaktionen strukturiert dar (übertragenes Teilchen, Donator, Akzeptor, korrespondierende Paare).',
+              hints: [],
+              sol: 'Beide sind <strong>Donator-Akzeptor-Reaktionen</strong> mit gleichem allgemeinen Schema:<br>Redox: Red1 + Ox2 ⇌ Ox1 + Red2 · Säure-Base: HA1 + B2 ⇌ A1⁻ + HB2⁺<br><br>Übertragen wird das Elektron (e⁻) bzw. das Proton (H⁺). Der Donator ist das Reduktionsmittel bzw. die Säure, der Akzeptor das Oxidationsmittel bzw. die Base. In beiden Fällen sind stets <strong>zwei korrespondierende Paare</strong> beteiligt (Redoxpaar Red/Ox bzw. Säure-Base-Paar HA/A⁻), und in beiden Fällen lassen sich die Partner nach ihrer Stärke ordnen (Redoxreihe bzw. pK<sub>S</sub>-Tabelle).' },
+            { q: 'Beurteilen Sie die Grenzen dieser Analogie. Nennen Sie mindestens zwei Punkte, an denen sie nicht trägt.',
+              hints: [{ t: 'Tipp', c: 'Denke an die Anzahl der übertragenen Teilchen und an die Rolle des Milieus.' }],
+              sol: '<strong>1. Anzahl der übertragenen Teilchen:</strong> Bei einer Protolyse wird pro Schritt genau ein Proton übertragen. Bei Redoxreaktionen ist die Elektronenzahl je Redoxpaar verschieden (1 e⁻ bei Ag⁺/Ag, 5 e⁻ bei MnO₄⁻/Mn²⁺). Deshalb ist der Ausgleich über das kgV nötig — ein Schritt ohne Entsprechung im Säure-Base-Konzept.<br><br><strong>2. Rolle des Milieus:</strong> Bei Redoxreaktionen entscheidet das Milieu mit, welches Produkt entsteht. Ein solches Umschalten des Produkts kennt das Säure-Base-Konzept nicht.<br><br><strong>3. Freie Teilchen:</strong> Protonen liegen in Wasser als H₃O⁺ gebunden vor. Freie Elektronen existieren in wässriger Lösung überhaupt nicht — sie müssen im selben Moment vom Akzeptor aufgenommen werden.' }
+        ]}
+    ];
+    // ================== TRAINING: AUFGABEN AUS DEM ÜBUNGSBLATT ==================
+    const STD_STEPS = [`Formuliere die Teilgleichung der Oxidation.`, `Formuliere die Teilgleichung der Reduktion.`, `Stelle die vollständige Redoxgleichung auf.`];
+    const TXT_STEPS = [`Bestimme alle beteiligten Teilchen mit ihren Oxidationszahlen aus dem Text.`, `Formuliere die Teilgleichungen der Oxidation und der Reduktion.`, `Stelle die vollständige Redoxgleichung auf.`];
+    const giv = s => `<span class="formula font-bold bg-white border border-gray-200 px-1.5 py-0.5 rounded whitespace-nowrap">${s}</span>`;
+    const WS_TERMS = [
+        [`Disproportionierung`, `Teilchen derselben Ausgangssubstanz werden in einer Reaktion gleichzeitig oxidiert und reduziert.`],
+        [`Komproportionierung`, `Zwei Teilchen desselben Elements liegen zunächst in unterschiedlichen Oxidationsstufen vor und reagieren zu einem gemeinsamen Produkt mit einer neuen, dazwischenliegenden Oxidationsstufe.`],
+        [`Nachweis`, `Ein chemischer Test, mit dem gezeigt wird, dass ein bestimmter Stoff in einer Probe enthalten ist.`],
+        [`Niederschlag`, `Ein fester Stoff, der sich während einer Reaktion in einer Lösung neu bildet und absetzt.`],
+        [`Rauchgas`, `Das Gasgemisch, das bei Verbrennungsprozessen entsteht, z. B. in Kraftwerken.`]
+    ];
+
+    // sol: [Beschriftung, Inhalt, istFließtext?]
+    const SAUER = [
+        { lvl: 'Einfach', text: `${giv('MnO₄⁻')} und ${giv('H₂O₂')} reagieren zu ${giv('Mn²⁺')} und ${giv('O₂')}.`, steps: STD_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Bestimme zuerst die Oxidationszahlen. Mangan: +VII → +II. Sauerstoff hat in H₂O₂ die OZ −I (Peroxid) und in O₂ die OZ 0. Welcher Stoff wird also oxidiert?` },
+                  { t: 'Tipp 2', c: `Ein H₂O₂-Molekül enthält zwei O-Atome, die je 1 e⁻ abgeben → 2 e⁻ pro Molekül. MnO₄⁻ nimmt 5 e⁻ auf. Das kgV ist 10.` }],
+          sol: [['Oxidation', 'H₂O₂ + 2 H₂O → O₂ + 2 H₃O⁺ + 2 e⁻'], ['Reduktion', 'MnO₄⁻ + 8 H₃O⁺ + 5 e⁻ → Mn²⁺ + 12 H₂O']],
+          final: '2 MnO₄⁻ + 6 H₃O⁺ + 5 H₂O₂ → 2 Mn²⁺ + 5 O₂ + 14 H₂O' },
+        { lvl: 'Einfach', text: `${giv('Cr₂O₇²⁻')} und ${giv('Fe²⁺')} reagieren zu ${giv('Cr³⁺')} und ${giv('Fe³⁺')}.`, steps: STD_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Chrom: +VI → +III. Achtung: Ein Dichromat-Ion enthält <strong>zwei</strong> Cr-Atome, die je 3 e⁻ aufnehmen.` },
+                  { t: 'Tipp 2', c: `Dichromat nimmt insgesamt 6 e⁻ auf, Fe²⁺ gibt nur 1 e⁻ ab → Faktor 6 für die Eisen-Ionen.` }],
+          sol: [['Oxidation', 'Fe²⁺ → Fe³⁺ + e⁻'], ['Reduktion', 'Cr₂O₇²⁻ + 14 H₃O⁺ + 6 e⁻ → 2 Cr³⁺ + 21 H₂O']],
+          final: 'Cr₂O₇²⁻ + 14 H₃O⁺ + 6 Fe²⁺ → 2 Cr³⁺ + 6 Fe³⁺ + 21 H₂O' },
+        { lvl: 'Einfach', text: `${giv('MnO₄⁻')} und ${giv('I⁻')} reagieren zu ${giv('Mn²⁺')} und ${giv('I₂')}.`, steps: STD_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Iod: −I → 0. Zwei Iodid-Ionen bilden gemeinsam ein I₂-Molekül: 2 I⁻ → I₂ + 2 e⁻.` },
+                  { t: 'Tipp 2', c: `Oxidation 2 e⁻, Reduktion 5 e⁻ → kgV 10. Die Oxidation wird also mit 5 multipliziert, die Reduktion mit 2.` }],
+          sol: [['Oxidation', '2 I⁻ → I₂ + 2 e⁻'], ['Reduktion', 'MnO₄⁻ + 8 H₃O⁺ + 5 e⁻ → Mn²⁺ + 12 H₂O']],
+          final: '2 MnO₄⁻ + 16 H₃O⁺ + 10 I⁻ → 2 Mn²⁺ + 5 I₂ + 24 H₂O' },
+        { lvl: 'Mittel', title: 'Nachweis von Oxalat-Ionen', text: `Wird eine angesäuerte Kaliumpermanganat-Lösung zu einer Lösung mit Oxalat-Ionen (C₂O₄²⁻) gegeben, verschwindet die violette Farbe langsam. Dabei entsteht ein farbloses Gas, das die bekannte Kalkwasserprobe positiv macht.`,
+          steps: [`Bestimme aus dem Text, welches Gas entsteht, und formuliere die Teilgleichung der Oxidation.`, `Teilgleichung der Reduktion (gegeben): ${giv('MnO₄⁻ → Mn²⁺')}`, `Stelle die vollständige Redoxgleichung auf.`],
+          hints: [{ t: 'Tipp 1', c: `Welches Gas trübt Kalkwasser? Dieses Gas ist das Oxidationsprodukt der Oxalat-Ionen.` },
+                  { t: 'Tipp 2', c: `Es entsteht CO₂. Kohlenstoff: +III in C₂O₄²⁻ → +IV in CO₂. Ein Oxalat-Ion enthält zwei C-Atome → 2 e⁻. Mit den 5 e⁻ der Reduktion ergibt sich das kgV 10.` }],
+          sol: [['Gas', 'CO₂ (positive Kalkwasserprobe)', true], ['Oxidation', 'C₂O₄²⁻ → 2 CO₂ + 2 e⁻'], ['Reduktion', 'MnO₄⁻ + 8 H₃O⁺ + 5 e⁻ → Mn²⁺ + 12 H₂O']],
+          final: '2 MnO₄⁻ + 16 H₃O⁺ + 5 C₂O₄²⁻ → 2 Mn²⁺ + 10 CO₂ + 24 H₂O' },
+        { lvl: 'Mittel', title: 'Kupfer in verdünnter Salpetersäure', text: `Gibt man Kupferspäne in verdünnte Salpetersäure (NO₃⁻/H₃O⁺), färbt sich die Lösung blau. Gleichzeitig entweicht ein farbloses Gas, das sich an der Luft sofort braun färbt.`,
+          steps: [`Teilgleichung der Oxidation (gegeben): ${giv('Cu → Cu²⁺')}`, `Bestimme aus dem Text, zu welchem Teilchen die Nitrat-Ionen reduziert werden (das farblose, an der Luft nachdunkelnde Gas), und formuliere die Teilgleichung der Reduktion.`, `Stelle die vollständige Redoxgleichung auf.`],
+          hints: [{ t: 'Tipp 1', c: `Das farblose Gas, das an der Luft braun wird, ist Stickstoffmonoxid (NO). Das braune Gas ist Stickstoffdioxid (NO₂).` },
+                  { t: 'Tipp 2', c: `Stickstoff: +V in NO₃⁻ → +II in NO, also 3 e⁻. Kupfer gibt 2 e⁻ ab. Das kgV ist 6.` }],
+          sol: [['Gas', 'NO (Stickstoffmonoxid, dunkelt an der Luft zu braunem NO₂ nach)', true], ['Oxidation', 'Cu → Cu²⁺ + 2 e⁻'], ['Reduktion', 'NO₃⁻ + 4 H₃O⁺ + 3 e⁻ → NO + 6 H₂O']],
+          final: '2 NO₃⁻ + 8 H₃O⁺ + 3 Cu → 2 NO + 3 Cu²⁺ + 12 H₂O' },
+        { lvl: 'Mittel', title: 'Alkotest-Prinzip', text: `Bei einem einfachen chemischen Alkoholtest wird angesäuerte Kaliumdichromat-Lösung (Cr₂O₇²⁻, orange) verwendet. Ethanol (C₂H₆O) aus der Atemluft wird dabei zu Ethanal (C₂H₄O) oxidiert, während sich die Lösung grün färbt.`,
+          steps: [`Bestimme die Oxidationszahlen von Kohlenstoff in Ethanol und Ethanal und formuliere die Teilgleichung der Oxidation.`, `Teilgleichung der Reduktion (gegeben): ${giv('Cr₂O₇²⁻ → Cr³⁺')}`, `Stelle die vollständige Redoxgleichung auf.`],
+          hints: [{ t: 'Tipp 1', c: `Zeichne die Strukturformeln (CH₃–CH₂OH und CH₃–CHO) und betrachte nur das C-Atom, das an Sauerstoff gebunden ist. Zähle die Bindungsbeiträge wie in der Strukturformel-Analyse.` },
+                  { t: 'Tipp 2', c: `Das C-Atom geht von −I auf +I – pro Ethanol-Molekül werden 2 e⁻ abgegeben. Dichromat nimmt 6 e⁻ auf, also reagieren 3 Ethanol-Moleküle pro Dichromat-Ion.` }],
+          sol: [['Oxidationszahlen', 'C-Atom mit O-Bindung in Ethanol: −I → in Ethanal: +I (2 e⁻ pro Molekül)', true], ['Oxidation', 'C₂H₆O + 2 H₂O → C₂H₄O + 2 H₃O⁺ + 2 e⁻'], ['Reduktion', 'Cr₂O₇²⁻ + 14 H₃O⁺ + 6 e⁻ → 2 Cr³⁺ + 21 H₂O']],
+          final: 'Cr₂O₇²⁻ + 8 H₃O⁺ + 3 C₂H₆O → 2 Cr³⁺ + 3 C₂H₄O + 15 H₂O' },
+        { lvl: 'Schwer', title: 'Klären einer Fotografie-Lösung', text: `In einer sauren Lösung wird Zinn(II)-chlorid zugegeben, um überschüssige Eisen(III)-Ionen zu entfernen. Dabei entstehen eine fast farblose Eisen(II)-Lösung und Zinn(IV)-Ionen.`, steps: TXT_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Übersetze die Namen in Teilchen: Zinn(II) = Sn²⁺, Zinn(IV) = Sn⁴⁺, Eisen(III) = Fe³⁺, Eisen(II) = Fe²⁺. Die römische Ziffer im Namen ist bereits die Oxidationszahl. Die Chlorid-Ionen nehmen nicht an der Redoxreaktion teil.` },
+                  { t: 'Tipp 2', c: `Sn²⁺ gibt 2 e⁻ ab, Fe³⁺ nimmt 1 e⁻ auf → 2 Fe³⁺ pro Sn²⁺. Rechne danach die Ladungen beider Seiten nach: Sind H₃O⁺ und H₂O hier überhaupt nötig?` }],
+          sol: [['Teilchen', 'Sn²⁺ (Sn: +II → +IV), Fe³⁺ (Fe: +III → +II)', true], ['Oxidation', 'Sn²⁺ → Sn⁴⁺ + 2 e⁻'], ['Reduktion', 'Fe³⁺ + e⁻ → Fe²⁺'], ['Hinweis', 'Die Ladungen betragen auf beiden Seiten bereits +8 – ein Ausgleich mit H₃O⁺ oder H₂O entfällt.', true]],
+          final: 'Sn²⁺ + 2 Fe³⁺ → Sn⁴⁺ + 2 Fe²⁺' },
+        { lvl: 'Schwer', title: 'Rauchgasreinigung (schweflige Säure)', text: `Leitet man Schwefeldioxid in Wasser ein, entsteht schweflige Säure (H₂SO₃). Wird diese Lösung zu angesäuerter Kaliumdichromat-Lösung gegeben, verfärbt sich die Lösung von orange nach grün, und die schweflige Säure wird vollständig zu Sulfat-Ionen oxidiert.`, steps: TXT_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Beteiligte Teilchen: H₂SO₃ → SO₄²⁻ sowie – erkennbar am Farbumschlag orange → grün – Cr₂O₇²⁻ → Cr³⁺. Bestimme die Oxidationszahlen von Schwefel und Chrom.` },
+                  { t: 'Tipp 2', c: `Schwefel: +IV → +VI (2 e⁻), Dichromat: 6 e⁻ → Faktor 3 für H₂SO₃. Vorsicht bei der Atombilanz: H₂SO₃ bringt selbst zwei H-Atome mit.` }],
+          sol: [['Teilchen', 'H₂SO₃ (S: +IV → +VI in SO₄²⁻), Cr₂O₇²⁻ (Cr: +VI → +III)', true], ['Oxidation', 'H₂SO₃ + 5 H₂O → SO₄²⁻ + 4 H₃O⁺ + 2 e⁻'], ['Reduktion', 'Cr₂O₇²⁻ + 14 H₃O⁺ + 6 e⁻ → 2 Cr³⁺ + 21 H₂O']],
+          final: 'Cr₂O₇²⁻ + 2 H₃O⁺ + 3 H₂SO₃ → 2 Cr³⁺ + 3 SO₄²⁻ + 6 H₂O' },
+        { lvl: 'Schwer', title: 'Schwefelwasserstoff-Nachweis', text: `Leitet man Schwefelwasserstoff (H₂S) in angesäuerte Kaliumdichromat-Lösung, bildet sich ein hellgelber Niederschlag aus elementarem Schwefel, während sich die Lösung grün färbt.`, steps: TXT_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Der hellgelbe Niederschlag ist elementarer Schwefel (S, OZ 0). Welche Oxidationszahl hat Schwefel in H₂S? Die Grünfärbung zeigt Cr³⁺ an.` },
+                  { t: 'Tipp 2', c: `Schwefel: −II → 0 (2 e⁻), Dichromat nimmt 6 e⁻ auf → Faktor 3 für H₂S.` }],
+          sol: [['Teilchen', 'H₂S (S: −II → 0 in elementarem S), Cr₂O₇²⁻ (Cr: +VI → +III)', true], ['Oxidation', 'H₂S + 2 H₂O → S + 2 H₃O⁺ + 2 e⁻'], ['Reduktion', 'Cr₂O₇²⁻ + 14 H₃O⁺ + 6 e⁻ → 2 Cr³⁺ + 21 H₂O']],
+          final: 'Cr₂O₇²⁻ + 8 H₃O⁺ + 3 H₂S → 2 Cr³⁺ + 3 S + 15 H₂O' }
+    ];
+
+    const BASISCH = [
+        { lvl: 'Einfach', text: `${giv('MnO₄⁻')} und ${giv('I⁻')} reagieren zu ${giv('MnO₂')} und ${giv('IO₃⁻')}.`, steps: STD_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Iod: −I in I⁻ → +V in IO₃⁻ (Summenregel: OZ(I) + 3·(−II) = −1). Mangan: +VII → +IV.` },
+                  { t: 'Tipp 2', c: `Iodid gibt 6 e⁻ ab, Permanganat nimmt 3 e⁻ auf → kgV 6, also 2 MnO₄⁻ pro I⁻. Ladungsausgleich mit OH⁻, Atombilanz mit H₂O.` }],
+          sol: [['Oxidation', 'I⁻ + 6 OH⁻ → IO₃⁻ + 3 H₂O + 6 e⁻'], ['Reduktion', 'MnO₄⁻ + 2 H₂O + 3 e⁻ → MnO₂ + 4 OH⁻']],
+          final: '2 MnO₄⁻ + I⁻ + H₂O → 2 MnO₂ + IO₃⁻ + 2 OH⁻' },
+        { lvl: 'Einfach', text: `${giv('Br₂')} reagiert in der Kälte mit ${giv('OH⁻')} zu ${giv('Br⁻')} und ${giv('BrO⁻')} (Disproportionierung).`, steps: STD_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Brom: 0 in Br₂, −I in Br⁻, +I in BrO⁻. Dasselbe Ausgangsteilchen wird gleichzeitig oxidiert und reduziert.` },
+                  { t: 'Tipp 2', c: `Formuliere beide Teilgleichungen ausgehend von Br₂. Beide übertragen 2 e⁻. Nach dem Zusammenführen lassen sich alle Koeffizienten durch 2 kürzen.` }],
+          sol: [['Oxidation', 'Br₂ + 4 OH⁻ → 2 BrO⁻ + 2 H₂O + 2 e⁻'], ['Reduktion', 'Br₂ + 2 e⁻ → 2 Br⁻'], ['Hinweis', 'Nach dem Zusammenführen alle Koeffizienten durch 2 kürzen.', true]],
+          final: 'Br₂ + 2 OH⁻ → Br⁻ + BrO⁻ + H₂O' },
+        { lvl: 'Einfach', title: 'Chlor in Natronlauge', text: `Chlor wird in Natronlauge eingeleitet. Es entstehen Chlorid-Ionen (Cl⁻) und Hypochlorit-Ionen (OCl⁻).`,
+          steps: [...STD_STEPS, `Benenne die Besonderheit dieser Reaktion.`],
+          hints: [{ t: 'Tipp 1', c: `Bestimme die Oxidationszahl des Chlors in Cl₂, in Cl⁻ und in OCl⁻. Was fällt auf?` },
+                  { t: 'Tipp 2', c: `Chlor wird gleichzeitig oxidiert (0 → +I) und reduziert (0 → −I). Beide Teilgleichungen gehen also von Cl₂ aus – vergleiche mit der Brom-Aufgabe davor.` }],
+          sol: [['Oxidation', 'Cl₂ + 4 OH⁻ → 2 OCl⁻ + 2 H₂O + 2 e⁻'], ['Reduktion', 'Cl₂ + 2 e⁻ → 2 Cl⁻'], ['Besonderheit', 'Disproportionierung – Chlor (OZ 0) wird gleichzeitig zu OCl⁻ (+I) oxidiert und zu Cl⁻ (−I) reduziert.', true]],
+          final: 'Cl₂ + 2 OH⁻ → Cl⁻ + OCl⁻ + H₂O' },
+        { lvl: 'Einfach', text: `${giv('MnO₄⁻')} und ${giv('Fe(OH)₂')} reagieren zu ${giv('MnO₂')} und ${giv('Fe(OH)₃')}.`, steps: STD_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Eisen: +II → +III (1 e⁻). Mangan: +VII → +IV (3 e⁻).` },
+                  { t: 'Tipp 2', c: `Faktor 3 für Fe(OH)₂. Die Hydroxide enthalten selbst O- und H-Atome – zähle bei der Atombilanz sorgfältig und kürze OH⁻ und H₂O, die auf beiden Seiten stehen.` }],
+          sol: [['Oxidation', 'Fe(OH)₂ + OH⁻ → Fe(OH)₃ + e⁻'], ['Reduktion', 'MnO₄⁻ + 2 H₂O + 3 e⁻ → MnO₂ + 4 OH⁻']],
+          final: 'MnO₄⁻ + 3 Fe(OH)₂ + 2 H₂O → MnO₂ + 3 Fe(OH)₃ + OH⁻' },
+        { lvl: 'Mittel', title: 'Bromwasser, heiß', text: `Erhitzt man Bromwasser mit Natronlauge, disproportioniert das Brom nicht wie in der Kälte zu Br⁻/BrO⁻, sondern zu Br⁻ und dem stärker oxidierten Bromat-Ion BrO₃⁻. Beide Bromatome stammen aus demselben Br₂-Molekül.`,
+          steps: [`Bestimme die Oxidationszahlen von Brom in Br⁻ und BrO₃⁻ und formuliere die beiden Teilgleichungen (Oxidation und Reduktion).`, `Stelle die vollständige Redoxgleichung auf.`],
+          hints: [{ t: 'Tipp 1', c: `Summenregel für das Bromat-Ion: OZ(Br) + 3·(−II) = −1 → OZ(Br) = +V. Im Bromid-Ion: −I.` },
+                  { t: 'Tipp 2', c: `Ein Br₂-Molekül, das zu 2 BrO₃⁻ oxidiert wird, gibt 2 · 5 = 10 e⁻ ab. Ein Br₂-Molekül, das zu 2 Br⁻ reduziert wird, nimmt nur 2 e⁻ auf → Reduktion mit 5 multiplizieren und am Ende kürzen.` }],
+          sol: [['Oxidationszahlen', 'Br⁻: −I · BrO₃⁻: +V', true], ['Oxidation', 'Br₂ + 12 OH⁻ → 2 BrO₃⁻ + 6 H₂O + 10 e⁻'], ['Reduktion (·5)', '5 Br₂ + 10 e⁻ → 10 Br⁻'], ['Hinweis', 'Zusammenführen ergibt 6 Br₂ + 12 OH⁻ → 2 BrO₃⁻ + 10 Br⁻ + 6 H₂O; anschließend durch 2 kürzen.', true]],
+          final: '3 Br₂ + 6 OH⁻ → 5 Br⁻ + BrO₃⁻ + 3 H₂O' },
+        { lvl: 'Mittel', title: 'Chrom(III)-Nachweis', text: `Eine grüne Chrom(III)-hydroxid-Suspension (Cr(OH)₃) wird mit Natronlauge und Wasserstoffperoxid-Lösung versetzt und erhitzt. Die Suspension löst sich auf, und es entsteht eine gelbe Lösung mit Chromat-Ionen (CrO₄²⁻). Anders als bei der Reaktion mit Permanganat wirkt Wasserstoffperoxid hier nicht als Reduktions-, sondern als Oxidationsmittel.`,
+          steps: [`Teilgleichung der Oxidation (gegeben): ${giv('Cr(OH)₃ → CrO₄²⁻')}`, `Bestimme aus dem Text, wozu H₂O₂ dabei reduziert wird, und formuliere die Teilgleichung der Reduktion.`, `Stelle die vollständige Redoxgleichung auf.`],
+          hints: [{ t: 'Tipp 1', c: `Chrom: +III in Cr(OH)₃ → +VI in CrO₄²⁻ (3 e⁻). H₂O₂ ist hier Oxidationsmittel: Sauerstoff geht von −I auf −II.` },
+                  { t: 'Tipp 2', c: `In alkalischer Lösung entstehen aus H₂O₂ Hydroxid-Ionen: H₂O₂ + 2 e⁻ → 2 OH⁻. Das kgV von 3 und 2 ist 6 → 2 Cr(OH)₃ und 3 H₂O₂.` }],
+          sol: [['H₂O₂ wird reduziert zu', 'OH⁻'], ['Oxidation', 'Cr(OH)₃ + 5 OH⁻ → CrO₄²⁻ + 4 H₂O + 3 e⁻'], ['Reduktion', 'H₂O₂ + 2 e⁻ → 2 OH⁻']],
+          final: '2 Cr(OH)₃ + 3 H₂O₂ + 4 OH⁻ → 2 CrO₄²⁻ + 8 H₂O' },
+        { lvl: 'Mittel', title: 'Nitrit-Nachweis', text: `Um Nitrit-Ionen (NO₂⁻) in einer Wasserprobe nachzuweisen, wird alkalische Kaliumpermanganat-Lösung zugegeben. Die violette Farbe verschwindet, ein brauner Niederschlag entsteht, und die Nitrit-Ionen werden zu Nitrat-Ionen (NO₃⁻) oxidiert.`,
+          steps: [`Teilgleichung der Reduktion (gegeben): ${giv('MnO₄⁻ → MnO₂')}`, `Bestimme aus dem Text die Teilgleichung der Oxidation.`, `Stelle die vollständige Redoxgleichung auf.`],
+          hints: [{ t: 'Tipp 1', c: `Der braune Niederschlag ist Braunstein (MnO₂). Stickstoff: +III in NO₂⁻ → +V in NO₃⁻.` },
+                  { t: 'Tipp 2', c: `Oxidation 2 e⁻, Reduktion 3 e⁻ → kgV 6: 3 NO₂⁻ und 2 MnO₄⁻.` }],
+          sol: [['Oxidation', 'NO₂⁻ + 2 OH⁻ → NO₃⁻ + H₂O + 2 e⁻'], ['Reduktion', 'MnO₄⁻ + 2 H₂O + 3 e⁻ → MnO₂ + 4 OH⁻']],
+          final: '2 MnO₄⁻ + 3 NO₂⁻ + H₂O → 2 MnO₂ + 3 NO₃⁻ + 2 OH⁻' },
+        { lvl: 'Schwer', title: 'Rauchgasentschwefelung', text: `In einer alkalischen Anlage zur Rauchgasreinigung wird Schwefeldioxid in Form von Sulfit-Ionen (SO₃²⁻) durch alkalische Kaliumpermanganat-Lösung oxidiert. Dabei entsteht ein brauner Feststoff, und die Sulfit-Ionen werden vollständig zu Sulfat-Ionen (SO₄²⁻) oxidiert.`, steps: TXT_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Der braune Feststoff ist Braunstein MnO₂ (Mn: +IV) – nicht das grüne Manganat! Schwefel: +IV in SO₃²⁻ → +VI in SO₄²⁻.` },
+                  { t: 'Tipp 2', c: `2 e⁻ gegen 3 e⁻ → kgV 6. Vergleiche mit dem Schritt-für-Schritt-Trainer: Dort entsteht in stark alkalischer Lösung Manganat (1 e⁻) – deshalb ergeben sich dort andere Faktoren.` }],
+          sol: [['Teilchen', 'SO₃²⁻ (S: +IV → +VI), MnO₄⁻ (Mn: +VII → +IV, brauner Feststoff MnO₂)', true], ['Oxidation', 'SO₃²⁻ + 2 OH⁻ → SO₄²⁻ + H₂O + 2 e⁻'], ['Reduktion', 'MnO₄⁻ + 2 H₂O + 3 e⁻ → MnO₂ + 4 OH⁻']],
+          final: '2 MnO₄⁻ + 3 SO₃²⁻ + H₂O → 2 MnO₂ + 3 SO₄²⁻ + 2 OH⁻' },
+        { lvl: 'Schwer', title: 'Rostbildung im alkalischen Milieu', text: `In einer alkalischen Wasseraufbereitungsanlage reagiert gelöstes Eisen(II)-hydroxid (Fe(OH)₂) mit dem im Wasser gelösten Luftsauerstoff (O₂). Es entstehen braune Eisen(III)-hydroxid-Flocken (Fe(OH)₃), die anschließend abfiltriert werden können.`, steps: TXT_STEPS,
+          hints: [{ t: 'Tipp 1', c: `Luftsauerstoff O₂ (OZ 0) wird zu Hydroxid-Ionen (O: −II) reduziert. Eisen: +II → +III.` },
+                  { t: 'Tipp 2', c: `Ein O₂-Molekül nimmt 4 e⁻ auf (2 Atome × 2 e⁻), Fe(OH)₂ gibt 1 e⁻ ab → 4 Fe(OH)₂ pro O₂. Beim Zusammenführen kürzen sich alle OH⁻ heraus.` }],
+          sol: [['Teilchen', 'Fe(OH)₂ (Fe: +II → +III), O₂ (O: 0 → −II)', true], ['Oxidation', 'Fe(OH)₂ + OH⁻ → Fe(OH)₃ + e⁻'], ['Reduktion', 'O₂ + 2 H₂O + 4 e⁻ → 4 OH⁻']],
+          final: 'O₂ + 2 H₂O + 4 Fe(OH)₂ → 4 Fe(OH)₃' },
+        { lvl: 'Schwer', title: 'Komproportionierung', text: `Gibt man zu einer grünen, alkalischen Manganat-Lösung (MnO₄²⁻) eine kleine Menge einer Mangan(II)-Lösung, bildet sich sofort ein brauner Niederschlag. Beide Mangan-Teilchen reagieren dabei zum selben Produkt (Komproportionierung).`,
+          steps: [`Bestimme die Oxidationszahlen von Mangan in beiden Ausgangsteilchen sowie im Produkt.`, `Formuliere die Teilgleichungen der Oxidation und der Reduktion.`, `Stelle die vollständige Redoxgleichung auf.`],
+          hints: [{ t: 'Tipp 1', c: `Der braune Niederschlag ist MnO₂. Mangan: +VI in MnO₄²⁻, +II in Mn²⁺, +IV in MnO₂.` },
+                  { t: 'Tipp 2', c: `Mn²⁺ gibt 2 e⁻ ab, MnO₄²⁻ nimmt 2 e⁻ auf – ein Faktor ist nicht nötig. Beim Zusammenführen heben sich OH⁻ und H₂O vollständig auf.` }],
+          sol: [['Oxidationszahlen', 'Mn in MnO₄²⁻: +VI · in Mn²⁺: +II · im Produkt MnO₂: +IV', true], ['Oxidation', 'Mn²⁺ + 4 OH⁻ → MnO₂ + 2 H₂O + 2 e⁻'], ['Reduktion', 'MnO₄²⁻ + 2 H₂O + 2 e⁻ → MnO₂ + 4 OH⁻']],
+          final: 'MnO₄²⁻ + Mn²⁺ → 2 MnO₂' }
+    ];
+
+    const TRAIN = [
+        { key: 'quiz', type: 'quiz', tag: 'Basiswissen', color: 'indigo', icon: 'brain-circuit', title: 'Wissens-Quiz', desc: 'Zehn Fragen quer durch die gesamte Einheit – mit einer Erklärung zu jeder Antwort.' },
+        { key: 't1', type: 'parts', tag: 'Grundlagen', color: 'green', icon: 'repeat', title: 'Redoxreihe & Donator-Akzeptor', desc: 'Reaktionen vorhersagen, Teilgleichungen formulieren, Oxidations- und Reduktionsmittel zuordnen.', parts: EXAM[0].parts },
+        { key: 't2', type: 'parts', tag: 'Verständnis', color: 'blue', icon: 'hash', title: 'Oxidationszahlen', desc: 'Anorganisch und organisch – mit Vorrang-Fällen und der Frage „Redoxreaktion oder nicht?".', parts: EXAM[1].parts },
+        { key: 't3', type: 'levels', tag: 'Anwendung', color: 'red', icon: 'flask-conical', title: 'Redoxgleichungen in saurer Lösung', desc: 'Neun Aufgaben mit Ladungsausgleich über H₃O⁺.', milieu: 'sauer', tasks: SAUER },
+        { key: 't4', type: 'levels', tag: 'Anwendung', color: 'purple', icon: 'droplet', title: 'Redoxgleichungen in alkalischer Lösung', desc: 'Zehn Aufgaben mit Ladungsausgleich über OH⁻ – inklusive Dis- und Komproportionierung.', milieu: 'alkalisch', tasks: BASISCH },
+        { key: 't5', type: 'parts', tag: 'Verständnis', color: 'amber', icon: 'beaker', title: 'Mangan & Milieu', desc: 'Warum dasselbe Ausgangsion je nach Milieu zu verschiedenen Produkten reagiert.', parts: EXAM[2].parts },
+        { key: 't6', type: 'parts', tag: 'Transfer', color: 'teal', icon: 'arrow-left-right', title: 'Analogie Redox ↔ Säure-Base', desc: 'Gemeinsamkeiten strukturiert darstellen und die Grenzen der Analogie beurteilen.', parts: EXAM[3].parts }
+    ];
+    const TR_COLORS = {
+        indigo: { tag: 'bg-indigo-100 text-indigo-700', icon: 'text-indigo-500', border: 'border-t-indigo-500', btn: 'bg-indigo-500' },
+        green:  { tag: 'bg-green-100 text-green-700',   icon: 'text-green-600',  border: 'border-t-green-500',  btn: 'bg-green-500' },
+        blue:   { tag: 'bg-blue-100 text-blue-700',     icon: 'text-blue-500',   border: 'border-t-blue-500',   btn: 'bg-blue-500' },
+        red:    { tag: 'bg-red-100 text-red-700',       icon: 'text-red-500',    border: 'border-t-red-500',    btn: 'bg-red-500' },
+        purple: { tag: 'bg-purple-100 text-purple-700', icon: 'text-purple-500', border: 'border-t-purple-500', btn: 'bg-purple-500' },
+        amber:  { tag: 'bg-amber-100 text-amber-800',   icon: 'text-amber-500',  border: 'border-t-amber-400',  btn: 'bg-amber-400' },
+        teal:   { tag: 'bg-teal-100 text-teal-700',     icon: 'text-teal-600',   border: 'border-t-teal-500',   btn: 'bg-teal-500' }
+    };
+    const LVL = { Einfach: 'bg-green-100 text-green-700 border-green-200', Mittel: 'bg-amber-100 text-amber-800 border-amber-200', Schwer: 'bg-red-100 text-red-700 border-red-200' };
+    const LEVELS = ['Einfach', 'Mittel', 'Schwer'];
+
+    let trOpen = null, trFilter = 'Alle';
+    function trItems(t) { return t.type === 'quiz' ? ['quiz'] : (t.tasks || t.parts).map((_, i) => t.key + '-' + i); }
+    function trDoneList() { return load('trDone', []); }
+    function isDone(id) { return trDoneList().includes(id); }
+    function setDone(id, val) {
+        let d = trDoneList();
+        if (val && !d.includes(id)) d = d.concat(id);
+        if (!val) d = d.filter(x => x !== id);
+        store('trDone', d);
+    }
+
+    // ---------- Übersicht mit Karten ----------
+    function renderTraining() {
+        const all = TRAIN.flatMap(trItems), n = all.filter(isDone).length, pct = Math.round(n / all.length * 100);
+        document.getElementById('trOverview').innerHTML = `
+            <div class="mb-6">
+                <h2 class="text-2xl md:text-3xl font-black text-gray-800 mb-1">Training & Klausurvorbereitung</h2>
+                <p class="text-gray-600">Bearbeite die Aufgaben schriftlich auf Papier. Nutze Tipps und Musterlösungen erst zur Überprüfung deiner Ansätze.</p>
+            </div>
+            <div class="flex justify-between text-sm font-bold text-gray-700 mb-2"><span>Lernfortschritt (${n}/${all.length} erledigt)</span><span>${pct}%</span></div>
+            <div class="w-full bg-gray-200 h-1.5 rounded-full mb-8 overflow-hidden"><div class="bg-primary h-full transition-all duration-500" style="width:${pct}%"></div></div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">${TRAIN.map(trCard).join('')}</div>`;
+        lucide.createIcons();
+    }
+    function trCard(t) {
+        const c = TR_COLORS[t.color], ids = trItems(t), n = ids.filter(isDone).length, full = n === ids.length;
+        const levels = t.type === 'levels'
+            ? `<div class="flex flex-wrap gap-1.5 mb-4">${LEVELS.map(l => `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${LVL[l]}">${t.tasks.filter(x => x.lvl === l).length}× ${l}</span>`).join('')}</div>` : '';
+        const sub = t.type === 'quiz' ? (full ? 'abgeschlossen' : '10 Fragen') : `${n}/${ids.length} erledigt`;
+        return `<div role="button" tabindex="0" onclick="openTrain('${t.key}')" onkeydown="if(event.key==='Enter')openTrain('${t.key}')"
+                class="bg-white rounded-2xl p-6 border border-gray-100 border-t-4 ${c.border} flex flex-col h-full shadow-[0_4px_20px_rgba(0,0,0,0.04)] cursor-pointer group hover:shadow-[0_8px_30px_rgba(0,0,0,0.09)] hover:-translate-y-1 transition-all duration-200 relative">
+                ${full ? '<div class="absolute top-4 right-4 text-primary"><i data-lucide="check-circle" class="w-5 h-5"></i></div>' : ''}
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded w-max mb-4 ${c.tag}">${t.tag}</span>
+                <h3 class="font-bold text-lg text-gray-800 mb-2 flex items-start gap-2 leading-snug"><i data-lucide="${t.icon}" class="w-5 h-5 flex-shrink-0 mt-0.5 ${c.icon}"></i><span>${t.title}</span></h3>
+                <p class="text-sm text-gray-600 mb-4 flex-grow">${t.desc}</p>
+                ${levels}
+                <div class="flex items-center justify-between w-full font-bold text-sm text-gray-800 pt-4 border-t border-gray-100">
+                    <span>Aufgabe bearbeiten<span class="block text-xs font-medium text-gray-400">${sub}</span></span>
+                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-white transition-transform group-hover:translate-x-1 ${c.btn}"><i data-lucide="arrow-right" class="w-4 h-4"></i></span>
+                </div>
+            </div>`;
+    }
+
+    // ---------- Unterseiten ----------
+    function openTrain(key) {
+        trOpen = key; trFilter = 'Alle';
+        document.getElementById('trOverview').classList.add('hidden');
+        document.getElementById('trDetail').classList.remove('hidden');
+        renderTrDetail();
+        document.getElementById('mainScrollArea').scrollTop = 0;
+    }
+    function closeTrain() {
+        trOpen = null;
+        document.getElementById('trDetail').classList.add('hidden');
+        document.getElementById('trOverview').classList.remove('hidden');
+        renderTraining();
+        document.getElementById('mainScrollArea').scrollTop = 0;
+    }
+    function renderTrDetail() {
+        const t = TRAIN.find(x => x.key === trOpen), c = TR_COLORS[t.color], ids = trItems(t);
+        const body = t.type === 'quiz' ? quizMarkup() : t.type === 'parts' ? t.parts.map((p, i) => partBlock(t, p, i)).join('') : levelsBody(t);
+        document.getElementById('trDetail').innerHTML = `
+            <button onclick="closeTrain()" class="text-gray-500 hover:text-gray-800 font-bold text-sm mb-5 flex items-center gap-2 transition hover:-translate-x-1"><i data-lucide="arrow-left" class="w-4 h-4"></i> Zurück zur Übersicht</button>
+            <div class="bg-white border border-gray-200 border-t-4 ${c.border} rounded-2xl p-5 md:p-8 shadow-sm">
+                <div class="flex items-start gap-3 mb-3">
+                    <i data-lucide="${t.icon}" class="w-8 h-8 flex-shrink-0 ${c.icon}"></i>
+                    <div class="flex-1 min-w-0">
+                        <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${c.tag}">${t.tag}</span>
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mt-1 leading-tight">${t.title}</h2>
+                    </div>
+                    ${t.type !== 'quiz' ? `<span id="trDetailCount" class="flex-shrink-0 text-xs font-bold text-primary bg-light px-3 py-1 rounded-full">${ids.filter(isDone).length}/${ids.length}</span>` : ''}
+                </div>
+                <p class="text-gray-600 mb-5">${t.desc}</p>
+                ${body}
+            </div>`;
+        lucide.createIcons();
+    }
+    function hintBlocks(hints) {
+        return hints.map(h => `<details class="group bg-blue-50 rounded-xl border border-blue-100 hint-accordion">
+            <summary class="flex justify-between items-center font-bold cursor-pointer p-3 text-sm text-blue-700 hover:bg-blue-100 rounded-xl transition"><span><i data-lucide="lightbulb" class="inline w-4 h-4 mr-2"></i>${h.t}</span><i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i></summary>
+            <div class="p-3 pt-0 text-sm text-blue-900 border-t border-blue-100/50 mt-1 leading-relaxed">${h.c}</div></details>`).join('');
+    }
+    function solBlock(inner) {
+        return `<details class="group bg-green-50 rounded-xl border border-green-200 hint-accordion">
+            <summary class="flex justify-between items-center font-bold cursor-pointer p-3.5 text-green-800 hover:bg-green-100 rounded-xl transition"><span><i data-lucide="check-circle" class="inline w-5 h-5 mr-2"></i>Musterlösung</span><i data-lucide="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180"></i></summary>
+            <div class="p-4 pt-0 text-green-900 border-t border-green-200/50 mt-2 leading-relaxed text-sm">${inner}</div></details>`;
+    }
+    function doneBtn(id) {
+        const d = isDone(id);
+        return `<button id="done-${id}" onclick="toggleTrDone('${id}')" class="btn-tap w-full mt-3 py-2.5 rounded-xl font-bold border-2 text-sm transition ${d ? 'bg-light border-primary text-primary' : 'bg-white border-gray-300 text-gray-600 hover:border-primary hover:text-primary'}">${d ? '✓ Erledigt' : 'Als erledigt markieren'}</button>`;
+    }
+    function toggleTrDone(id) {
+        const now = !isDone(id);
+        setDone(id, now);
+        const b = document.getElementById('done-' + id); if (b) b.outerHTML = doneBtn(id);
+        const box = document.getElementById('box-' + id);
+        if (box) { box.classList.toggle('border-primary', now); box.classList.toggle('border-gray-200', !now); }
+        const t = TRAIN.find(x => x.key === trOpen), ids = trItems(t), cnt = document.getElementById('trDetailCount');
+        if (cnt) cnt.textContent = `${ids.filter(isDone).length}/${ids.length}`;
+    }
+    function partBlock(t, p, i) {
+        const id = t.key + '-' + i;
+        return `<div id="box-${id}" class="border-2 ${isDone(id) ? 'border-primary' : 'border-gray-200'} rounded-2xl p-4 md:p-5 mb-4">
+            <div class="bg-[#f4f8f6] border border-[#dfeae3] rounded-xl p-4 mb-3">
+                <p class="text-gray-800 leading-relaxed"><span class="font-bold text-primary mr-1">${String.fromCharCode(97 + i)})</span> ${p.q}</p>
+            </div>
+            <div class="flex flex-col gap-2">${hintBlocks(p.hints)}${solBlock(p.sol)}</div>
+            ${doneBtn(id)}
+        </div>`;
+    }
+    function levelsBody(t) {
+        const acid = t.milieu === 'sauer';
+        const count = l => l === 'Alle' ? t.tasks.length : t.tasks.filter(x => x.lvl === l).length;
+        const pills = ['Alle', ...LEVELS].map(l => `<button onclick="setTrFilter('${l}')" class="btn-tap px-3.5 py-1.5 rounded-full text-sm font-bold border-2 transition ${trFilter === l ? 'bg-gray-800 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'}">${l} <span class="opacity-60">${count(l)}</span></button>`).join('');
+        const intro = `<div class="bg-light border-l-4 border-primary rounded-xl p-4 mb-3 text-sm text-[#2f6137]">
+            Ladungsausgleich in ${acid ? 'saurer' : 'alkalischer'} Lösung mit <strong class="formula">${acid ? 'H₃O⁺' : 'OH⁻'}</strong>, Atombilanz mit <strong class="formula">H₂O</strong>.
+            In den Musterlösungen sind die Teilgleichungen bereits vollständig ausgeglichen – das Endergebnis ist dasselbe wie mit dem 3-Schritte-Verfahren.</div>`;
+        const terms = `<details class="group bg-orange-50 rounded-xl border border-orange-200 hint-accordion mb-5">
+            <summary class="flex justify-between items-center font-bold cursor-pointer p-3 text-sm text-orange-800 hover:bg-orange-100 rounded-xl transition"><span><i data-lucide="book-marked" class="inline w-4 h-4 mr-2"></i>Fachbegriffe</span><i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i></summary>
+            <dl class="px-4 pb-3 text-sm text-orange-900 border-t border-orange-200/60">${WS_TERMS.map(([a, b]) => `<dt class="font-bold mt-2.5">${a}</dt><dd>${b}</dd>`).join('')}</dl></details>`;
+        let groups = '';
+        LEVELS.forEach(l => {
+            if (trFilter !== 'Alle' && trFilter !== l) return;
+            const items = t.tasks.map((x, i) => ({ x, i })).filter(o => o.x.lvl === l);
+            groups += `<div class="flex items-center gap-3 mt-7 mb-3"><span class="text-sm font-bold px-3 py-1 rounded-full border ${LVL[l]}">${l}</span><div class="flex-1 h-px bg-gray-200"></div></div>`
+                + items.map(o => levelTask(t, o.x, o.i)).join('');
+        });
+        return intro + terms + `<div class="flex flex-wrap gap-2">${pills}</div>` + groups;
+    }
+    function setTrFilter(l) { trFilter = l; renderTrDetail(); }
+    function levelTask(t, x, i) {
+        const id = t.key + '-' + i, acid = t.milieu === 'sauer', num = t.key.slice(1) + '.' + (i + 1);
+        const solInner = `<div class="space-y-1.5">${x.sol.map(([a, b, prose]) => `<p><span class="font-bold">${a}:</span> <span class="${prose ? '' : 'formula'}">${b}</span></p>`).join('')}</div>
+            <p class="text-xs font-bold text-green-800 uppercase tracking-wider mt-4 mb-1">Redoxgleichung</p>
+            <p class="formula font-bold bg-white p-3 rounded-lg border-2 border-primary text-primary text-center overflow-x-auto">${x.final}</p>`;
+        return `<div id="box-${id}" class="border-2 ${isDone(id) ? 'border-primary' : 'border-gray-200'} rounded-2xl p-4 md:p-5 mb-4 bg-white">
+            <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2"><span class="formula font-bold text-primary">${num}</span><span class="text-[11px] font-bold px-2 py-0.5 rounded-full border ${LVL[x.lvl]}">${x.lvl}</span></div>
+                <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${acid ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}">${acid ? 'sauer' : 'alkalisch'}</span>
+            </div>
+            <div class="bg-[#f4f8f6] border border-[#dfeae3] rounded-xl p-4 mb-3">
+                ${x.title ? `<p class="font-bold text-gray-800 mb-1">${x.title}</p>` : ''}
+                <p class="text-gray-800 leading-relaxed">${x.text}</p>
+                <ol class="list-decimal pl-5 text-sm text-gray-700 mt-3 space-y-1.5">${x.steps.map(s => `<li>${s}</li>`).join('')}</ol>
+            </div>
+            <div class="flex flex-col gap-2">${hintBlocks(x.hints)}${solBlock(solInner)}</div>
+            ${doneBtn(id)}
+        </div>`;
+    }
+    function quizMarkup() {
+        return `<div id="quiz-container" class="bg-gray-50 rounded-2xl p-5 md:p-6 border border-gray-200">
+            <div class="flex justify-between items-center mb-4 gap-3">
+                <h4 class="font-bold text-gray-800 text-base md:text-lg">Fragen quer durch die gesamte Einheit</h4>
+                <div id="quiz-progress" class="bg-white px-4 py-2 rounded-full font-bold text-primary shadow-inner border border-gray-200 flex-shrink-0">0 / 10</div>
+            </div>
+            <div id="quiz-start-screen" class="text-center py-8 reveal-anim"><button onclick="startQuiz()" class="btn-tap btn-hover inline-block bg-primary text-white py-4 px-10 rounded-2xl font-bold text-xl shadow-lg">Quiz starten</button></div>
+            <div id="quiz-game-screen" class="hidden reveal-anim">
+                <h4 id="quiz-question" class="text-lg md:text-xl font-bold text-gray-800 mb-5 bg-white p-5 rounded-2xl border border-gray-200 shadow-sm"></h4>
+                <div id="quiz-options" class="flex flex-col gap-3 mb-5"></div>
+                <div id="quiz-feedback" class="hidden p-4 rounded-xl font-medium mb-4 reveal-anim"></div>
+                <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="btn-tap hidden w-full bg-gray-800 hover:bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg">Weiter →</button>
+            </div>
+            <div id="quiz-end-screen" class="hidden text-center py-8 reveal-anim">
+                <div class="w-20 h-20 bg-light text-primary rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="award" class="w-10 h-10"></i></div>
+                <h4 class="text-2xl md:text-3xl font-black text-gray-800 mb-2">Quiz beendet!</h4>
+                <p class="text-lg text-gray-600 mb-2">Du hast <strong id="quiz-score" class="text-primary">0</strong> von <span id="quiz-total">10</span> Fragen richtig beantwortet.</p>
+                <p id="quiz-verdict" class="text-sm text-gray-500 mb-6"></p>
+                <div class="flex flex-wrap gap-3 justify-center">
+                    <button onclick="startQuiz()" class="btn-tap bg-primary hover:bg-[#2f6137] text-white py-2.5 px-6 rounded-xl font-bold">Erneut spielen</button>
+                    <button onclick="closeTrain()" class="btn-tap bg-gray-200 hover:bg-gray-300 text-gray-700 py-2.5 px-6 rounded-xl font-bold">Zurück</button>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    // ================== WISSENS-QUIZ ==================
+    const QUIZ = [
+        { q: 'Was geschieht bei einer Oxidation?', o: ['Elektronen werden abgegeben, die Oxidationszahl steigt', 'Elektronen werden aufgenommen, die Oxidationszahl sinkt', 'Protonen werden abgegeben', 'Sauerstoff wird immer angelagert'], a: 0, e: 'Oxidation ist die Abgabe von Elektronen. Dadurch steigt die Oxidationszahl.' },
+        { q: 'Ein Oxidationsmittel …', o: ['… nimmt Elektronen auf und wird selbst reduziert', '… gibt Elektronen ab und wird selbst oxidiert', '… nimmt Elektronen auf und wird selbst oxidiert', '… verändert seine Oxidationszahl nicht'], a: 0, e: 'Das Oxidationsmittel oxidiert seinen Partner, indem es dessen Elektronen aufnimmt — dabei wird es selbst reduziert.' },
+        { q: 'Welche Oxidationszahl hat Mangan im Permanganat-Ion MnO₄⁻?', o: ['+II', '+IV', '+VI', '+VII'], a: 3, e: 'Regel 5: O = −II → 4·(−II) = −VIII. Regel 1: Summe = Ionenladung = −1. OZ(Mn) − VIII = −1 → OZ(Mn) = +VII.' },
+        { q: 'Welche Oxidationszahl hat Sauerstoff in H₂O₂?', o: ['−II', '−I', '0', '+II'], a: 1, e: 'Regel 4 (H = +I) hat Vorrang vor Regel 5. 2·(+I) + 2·OZ(O) = 0 → OZ(O) = −I. Ein Peroxid.' },
+        { q: 'Zu einer Zinksulfat-Lösung wird Kupfer gegeben. Was passiert?', o: ['Keine Reaktion — Kupfer steht unter Zink in der Redoxreihe', 'Kupfer löst sich auf, Zink scheidet sich ab', 'Beide Metalle lösen sich auf', 'Es entsteht Wasserstoff'], a: 0, e: 'Ein Metall kann nur die Ionen der in der Redoxreihe unter ihm stehenden Metalle reduzieren. Kupfer steht unter Zink, also läuft keine Reaktion ab.' },
+        { q: 'Womit werden die Ladungen beim Aufstellen einer Redoxgleichung in alkalischer Lösung ausgeglichen?', o: ['H₃O⁺', 'OH⁻', 'H₂', 'O²⁻'], a: 1, e: 'In alkalischer Lösung wird mit OH⁻ ausgeglichen, in saurer Lösung mit H₃O⁺. Alle übrigen Schritte bleiben gleich.' },
+        { q: 'MnO₄⁻ nimmt in saurer Lösung 5 e⁻ auf, Fe²⁺ gibt 1 e⁻ ab. Wie viele Fe²⁺-Ionen reagieren pro MnO₄⁻-Ion?', o: ['1', '2', '5', '8'], a: 2, e: 'Das kgV der Elektronenzahlen ist 5 — es müssen also 5 Fe²⁺ pro MnO₄⁻ reagieren, damit abgegebene und aufgenommene Elektronenzahl übereinstimmen.' },
+        { q: 'Warum ist die Veresterung keine Redoxreaktion, obwohl organische Stoffe umgewandelt werden?', o: ['Weil kein Sauerstoff beteiligt ist', 'Weil sich keine Oxidationszahl ändert', 'Weil Wasser entsteht', 'Weil eine Säure als Katalysator dient'], a: 1, e: 'Die Oxidationszahl des Carboxyl-C-Atoms bleibt +III. Ohne Änderung einer Oxidationszahl findet keine Elektronenübertragung statt.' },
+        { q: 'Welchen Beitrag liefert eine C–H-Bindung zur Oxidationszahl des C-Atoms?', o: ['+1, weil H elektronegativer ist', '−1, weil C elektronegativer ist', '0, weil die EN gleich ist', '+2, weil sie doppelt zählt'], a: 1, e: 'EN(C) = 2,55 ist größer als EN(H) = 2,20. Das bindende Elektronenpaar wird formal dem C-Atom zugeteilt — Beitrag −1.' },
+        { q: 'Was bezeichnet man als Disproportionierung?', o: ['Ein Element wird gleichzeitig oxidiert und reduziert', 'Zwei Oxidationsstufen laufen in einer mittleren zusammen', 'Ein Stoff gibt Protonen ab', 'Die Reaktion läuft nur in saurer Lösung ab'], a: 0, e: 'Bei einer Disproportionierung wird ein und dasselbe Element gleichzeitig oxidiert und reduziert, z. B. Cl₂ → Cl⁻ + OCl⁻.' },
+        { q: 'Welches Teilchen entspricht in der Analogie Redox ↔ Säure-Base dem Proton?', o: ['Das Elektron', 'Das Neutron', 'Das Hydroxid-Ion', 'Das Oxid-Ion'], a: 0, e: 'Bei Redoxreaktionen werden Elektronen übertragen, bei Säure-Base-Reaktionen Protonen — beide nach dem Donator-Akzeptor-Prinzip.' },
+        { q: 'Welche Regel hat beim Bestimmen von Oxidationszahlen Vorrang?', o: ['Regel 5 (Sauerstoff −II) vor Regel 3 (Fluor −I)', 'Regel 3 (Fluor −I) vor Regel 5 (Sauerstoff −II)', 'Beide sind gleichrangig', 'Es gibt keine Rangfolge'], a: 1, e: 'Die Regeln gelten in Prioritätsreihenfolge: Regeln mit niedrigerer Nummer haben Vorrang. Deshalb ist O in OF₂ ausnahmsweise +II.' }
+    ];
+    let qOrder = [], qPos = 0, qScore = 0, qSel = null;
+    function startQuiz() {
+        qOrder = QUIZ.map((_, i) => i).sort(() => Math.random() - .5).slice(0, 10);
+        qPos = 0; qScore = 0;
+        document.getElementById('quiz-total').textContent = qOrder.length;
+        document.getElementById('quiz-start-screen').classList.add('hidden');
+        document.getElementById('quiz-end-screen').classList.add('hidden');
+        document.getElementById('quiz-game-screen').classList.remove('hidden');
+        showQuizQuestion();
+    }
+    function showQuizQuestion() {
+        qSel = null;
+        const q = QUIZ[qOrder[qPos]];
+        document.getElementById('quiz-progress').textContent = qPos + ' / ' + qOrder.length;
+        document.getElementById('quiz-question').textContent = q.q;
+        document.getElementById('quiz-options').innerHTML = q.o.map((o, i) => `<button class="quiz-option btn-tap btn-hover" onclick="selectQuizAnswer(${i})">${o}</button>`).join('');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-next-btn').classList.add('hidden');
+    }
+    function selectQuizAnswer(i) {
+        if (qSel !== null) return;
+        qSel = i;
+        const q = QUIZ[qOrder[qPos]];
+        document.querySelectorAll('#quiz-options button').forEach((b, idx) => {
+            b.disabled = true;
+            if (idx === q.a) b.classList.add('correct'); else if (idx === i) b.classList.add('wrong');
+        });
+        if (i === q.a) qScore++;
+        const f = document.getElementById('quiz-feedback');
+        f.classList.remove('hidden');
+        f.className = 'p-4 rounded-xl font-medium mb-4 reveal-anim ' + (i === q.a ? 'bg-light text-[#2f6137] border border-[#dfeae3]' : 'bg-red-50 text-red-900 border border-red-200');
+        f.innerHTML = `<p class="font-bold mb-1">${i === q.a ? 'Richtig!' : 'Leider falsch.'}</p><p class="text-sm">${q.e}</p>`;
+        document.getElementById('quiz-next-btn').classList.remove('hidden');
+        lucide.createIcons();
+    }
+    function nextQuizQuestion() {
+        qPos++;
+        if (qPos < qOrder.length) { showQuizQuestion(); return; }
+        document.getElementById('quiz-game-screen').classList.add('hidden');
+        document.getElementById('quiz-end-screen').classList.remove('hidden');
+        document.getElementById('quiz-score').textContent = qScore;
+        document.getElementById('quiz-progress').textContent = qOrder.length + ' / ' + qOrder.length;
+        const r = qScore / qOrder.length;
+        document.getElementById('quiz-verdict').textContent =
+            r === 1 ? 'Perfekt — alles sitzt!' : r >= .8 ? 'Sehr gut. Schau dir nur die verpassten Fragen noch einmal an.'
+            : r >= .5 ? 'Solide Grundlage. Wiederhole die Themen, bei denen du danebenlagst.'
+            : 'Geh die Reiter noch einmal in Ruhe durch und versuche es dann erneut.';
+        const best = load('quizBest', 0);
+        if (qScore > best) store('quizBest', qScore);
+        setDone('quiz', true);
+    }
+
+    // ================== GLOSSAR ==================
+    const GLOSSAR = [
+        { de: 'Oxidation', en: 'oxidation', d: 'Abgabe von Elektronen. Die Oxidationszahl des betreffenden Atoms steigt.' },
+        { de: 'Reduktion', en: 'reduction', d: 'Aufnahme von Elektronen. Die Oxidationszahl des betreffenden Atoms sinkt.' },
+        { de: 'Redoxreaktion', en: 'redox reaction', d: 'Reaktion, bei der Elektronenübergänge stattfinden. Oxidation und Reduktion laufen stets gleichzeitig ab.' },
+        { de: 'Elektronendonator', en: 'electron donor', d: 'Teilchen, das Elektronen abgibt und dabei selbst oxidiert wird.' },
+        { de: 'Elektronenakzeptor', en: 'electron acceptor', d: 'Teilchen, das Elektronen aufnimmt und dabei selbst reduziert wird.' },
+        { de: 'Oxidationsmittel', en: 'oxidising agent', d: 'Elektronenakzeptor: oxidiert seinen Reaktionspartner und wird dabei selbst reduziert.' },
+        { de: 'Reduktionsmittel', en: 'reducing agent', d: 'Elektronendonator: reduziert seinen Reaktionspartner und wird dabei selbst oxidiert.' },
+        { de: 'Oxidationszahl (OZ)', en: 'oxidation number', d: 'Modellhafte Ladung eines Atoms unter der Annahme, dass jedes bindende Elektronenpaar vollständig dem elektronegativeren Partner gehört. Wird in römischen Ziffern angegeben.' },
+        { de: 'Summenregel', en: 'sum rule', d: 'Regel 1: Die Summe aller Oxidationszahlen ist bei Molekülen null, bei Molekül-Ionen gleich der Ionenladung.' },
+        { de: 'Elektronegativität (EN)', en: 'electronegativity', d: 'Maß für die Fähigkeit eines Atoms, bindende Elektronenpaare an sich zu ziehen. Grundlage für die Zuteilung der Oxidationszahlen (H 2,20 · C 2,55 · N 3,04 · Cl 3,16 · O 3,44 · F 3,98).' },
+        { de: 'Korrespondierendes Redoxpaar', en: 'redox couple', d: 'Red- und Ox-Form desselben Stoffes, die durch Elektronenabgabe bzw. -aufnahme ineinander übergehen, z. B. Cu/Cu²⁺. An jeder Redoxreaktion sind zwei solche Paare beteiligt.' },
+        { de: 'Redoxreihe', en: 'reactivity series', d: 'Anordnung von Redoxpaaren nach ihrem Reduktions- bzw. Oxidationsvermögen. Ein Metall-Atom kann die Ionen des unter ihm stehenden Metalls reduzieren.' },
+        { de: 'Teilgleichung', en: 'half-equation', d: 'Getrennte Formulierung von Oxidation bzw. Reduktion, jeweils mit den beteiligten Elektronen.' },
+        { de: 'kgV der Elektronenzahl', en: 'LCM of electron count', d: 'Kleinstes gemeinsames Vielfaches der abgegebenen und aufgenommenen Elektronen. Es bestimmt die Faktoren, mit denen die Teilgleichungen multipliziert werden.' },
+        { de: 'Ladungsausgleich', en: 'charge balance', d: 'Schritt 3b: Ergänzen von H₃O⁺ (saure Lösung) bzw. OH⁻ (alkalische Lösung), bis beide Seiten dieselbe Gesamtladung tragen.' },
+        { de: 'Atombilanz', en: 'atom balance', d: 'Schritt 3c: Ergänzen von H₂O, bis die Anzahl der Wasserstoff- und Sauerstoff-Atome auf beiden Seiten übereinstimmt.' },
+        { de: 'Disproportionierung', en: 'disproportionation', d: 'Ein und dasselbe Element wird gleichzeitig oxidiert und reduziert, z. B. Cl₂ → Cl⁻ + OCl⁻.' },
+        { de: 'Komproportionierung', en: 'comproportionation', d: 'Zwei Teilchen desselben Elements in verschiedenen Oxidationsstufen reagieren zu einer gemeinsamen, mittleren Oxidationsstufe.' },
+        { de: 'Permanganat-Ion', en: 'permanganate ion', d: 'MnO₄⁻, tiefviolett, Mangan in der Oxidationsstufe +VII. Starkes Oxidationsmittel.' },
+        { de: 'Manganat-Ion', en: 'manganate ion', d: 'MnO₄²⁻, grün, Mangan in der Oxidationsstufe +VI. Entsteht in stark alkalischer Lösung.' },
+        { de: 'Braunstein', en: 'manganese dioxide', d: 'MnO₂, brauner Feststoff, Mangan in der Oxidationsstufe +IV.' },
+        { de: 'Hydrid-Ion', en: 'hydride ion', d: 'H⁻ — Wasserstoff mit der Oxidationszahl −I, z. B. in NaH. Tritt auf, weil Regel 2 (Metalle positiv) Vorrang vor Regel 4 hat.' },
+        { de: 'Peroxid', en: 'peroxide', d: 'Verbindung mit einer O–O-Bindung, in der Sauerstoff die Oxidationszahl −I trägt, z. B. H₂O₂.' },
+        { de: 'Patina', en: 'patina', d: 'Oberflächliche Veränderung, die durch chemische Reaktion eines Materials mit der Luft entsteht – z. B. die Oxidschicht auf Kupferblechen.' },
+        { de: 'Nachweis', en: 'test / detection', d: 'Ein chemischer Test, mit dem gezeigt wird, dass ein bestimmter Stoff in einer Probe enthalten ist.' },
+        { de: 'Niederschlag', en: 'precipitate', d: 'Ein fester Stoff, der sich während einer Reaktion in einer Lösung neu bildet und absetzt.' },
+        { de: 'Rauchgas', en: 'flue gas', d: 'Das Gasgemisch, das bei Verbrennungsprozessen entsteht, z. B. in Kraftwerken.' },
+        { de: 'Protolyse', en: 'protolysis', d: 'Säure-Base-Reaktion mit Protonenübergang — das strukturelle Gegenstück zur Redoxreaktion mit Elektronenübergang.' }
+    ];
+    function renderGlossar() {
+        document.getElementById('glossarList').innerHTML = GLOSSAR.map(t => `
+            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm glossar-item" data-search="${(t.de + ' ' + t.en + ' ' + t.d).toLowerCase()}">
+                <h4 class="font-bold text-gray-800">${t.de} <span class="text-gray-400 font-normal text-sm">/ ${t.en}</span></h4>
+                <p class="text-sm text-gray-600 mt-1 leading-relaxed">${t.d}</p>
+            </div>`).join('');
+    }
+    function filterGlossar() {
+        const q = document.getElementById('glossarSearch').value.toLowerCase().trim();
+        let n = 0;
+        document.querySelectorAll('.glossar-item').forEach(el => {
+            const hit = el.dataset.search.includes(q);
+            el.style.display = hit ? 'block' : 'none'; if (hit) n++;
+        });
+        document.getElementById('glossarEmpty').classList.toggle('hidden', n > 0);
+    }
+    </script>
+</body>
+</html>

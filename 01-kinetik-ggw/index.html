@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EduApp: Reaktionskinetik</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3d7c47',
+                        secondary: '#8bb29c',
+                        light: '#dfeae3',
+                        accent: '#b6964a',
+                        bgcolor: '#f4f8f6'
+                    },
+                    borderRadius: {
+                        '3xl': '1.5rem',
+                        '4xl': '2rem',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f4f8f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Generic animation for revealing steps */
+        .reveal-anim {
+            animation: slideDownFade 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideDownFade {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-tap {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-tap:active {
+            transform: scale(0.96);
+        }
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Select Dropdown Reset for iOS */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%233d7c47" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+            background-repeat: no-repeat;
+            background-position-x: 95%;
+            background-position-y: center;
+            padding-right: 1.5rem;
+            max-width: 100%;
+            transition: border-color 0.2s;
+        }
+        select:focus {
+            border-color: #8bb29c;
+        }
+
+        /* Quiz Styles */
+        .quiz-option {
+            background-color: white;
+            border: 2px solid #dfeae3;
+            color: #3d7c47;
+            padding: 1rem;
+            border-radius: 1rem;
+            font-weight: 600;
+            text-align: left;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+        .quiz-option:disabled {
+            cursor: default;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        .quiz-option.correct {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+            color: #166534;
+        }
+        .quiz-option.wrong {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+        
+        /* Interactive WF Cards */
+        .wf-card {
+            border: 2px solid #dfeae3;
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background-color: white;
+            transition: all 0.3s ease;
+        }
+
+        canvas {
+            touch-action: none;
+            image-rendering: pixelated; /* Crisp on high DPI if needed */
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden" onload="initApp()">
+
+    <!-- Header & Navigation -->
+    <header class="bg-primary text-white pt-12 pb-4 px-6 rounded-b-4xl shadow-lg z-10 flex-shrink-0 transition-all duration-300">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold mb-4 flex items-center gap-3">
+                <i data-lucide="flask-conical" class="w-8 h-8"></i>
+                Reaktionskinetik
+            </h1>
+            <nav class="flex gap-2 overflow-x-auto pb-2">
+                <button onclick="switchTab('wdhl')" id="nav-wdhl" class="btn-tap btn-hover bg-white text-primary px-5 py-3 rounded-2xl font-bold whitespace-nowrap shadow flex items-center gap-2">
+                    <i data-lucide="calculator" class="w-5 h-5"></i> Wdhl Rechnen
+                </button>
+                <button onclick="switchTab('wr1')" id="nav-wr1" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white px-5 py-3 rounded-2xl font-bold whitespace-nowrap flex items-center gap-2">
+                    <i data-lucide="timer" class="w-5 h-5"></i> Kinetik
+                </button>
+                <button onclick="switchTab('fachsprache')" id="nav-fachsprache" class="btn-tap btn-hover bg-secondary bg-opacity-30 text-white px-5 py-3 rounded-2xl font-bold whitespace-nowrap flex items-center gap-2">
+                    <i data-lucide="languages" class="w-5 h-5"></i> Fachsprache
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow overflow-y-auto p-6">
+        <div class="max-w-4xl mx-auto pb-20">
+
+            <!-- ==========================================
+                 WISSENSREITER 0: Wdhl Rechnen
+                 ========================================== -->
+            <div id="tab-wdhl" class="tab-content active">
+                
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 border-l-8 border-blue-500 transition-all hover:shadow-md">
+                    <h2 class="text-2xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+                        <i data-lucide="split-square-horizontal" class="w-6 h-6"></i>
+                        Reaktionsgleichungen
+                    </h2>
+                    <div class="bg-gray-50 p-5 rounded-2xl mb-4 border border-gray-100">
+                        <h3 class="font-bold text-gray-800 text-lg mb-2">Ausgleichen von Reaktionsgleichungen</h3>
+                        <p class="text-gray-700">
+                            Auf der Edukt- und Produktseite muss stets die <strong>gleiche Anzahl von Atomen</strong> jedes Elements stehen. Um dies zu erreichen, werden geeignete Koeffizienten ergänzt (auch Dezimalzahlen sind erlaubt und oft sehr nützlich).
+                        </p>
+                    </div>
+
+                    <div class="bg-blue-50 p-5 rounded-2xl mb-4 border border-blue-100">
+                        <h3 class="font-bold text-blue-900 text-xl mb-3">Beispiel: Verbrennung von Butangas</h3>
+                        <p class="font-mono text-lg text-center font-bold bg-white p-4 rounded-xl shadow-sm text-blue-900">
+                            C<sub>4</sub>H<sub>10</sub> + 6,5 O<sub>2</sub> &rarr; 4 CO<sub>2</sub> + 5 H<sub>2</sub>O
+                        </p>
+                        
+                        <div class="mt-4 bg-white p-4 rounded-xl border border-blue-100">
+                            <h4 class="font-bold text-gray-800 mb-2">Informationsgehalt der Gleichung:</h4>
+                            <p class="text-gray-700 leading-relaxed">
+                                Die Koeffizienten vor den Formeln beschreiben das exakte Stoffmengenverhältnis aller an der Reaktion beteiligten Teilchen:<br>
+                                &bull; <strong>1 mol</strong> Butan reagiert mit <strong>6,5 mol</strong> Sauerstoff.<br>
+                                &bull; <strong>1 mol</strong> Butan reagiert zu <strong>4 mol</strong> Kohlenstoffdioxid.<br>
+                                &bull; <strong>1 mol</strong> Butan reagiert zu <strong>5 mol</strong> Wasser.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 border-l-8 border-purple-500 transition-all hover:shadow-md">
+                    <h2 class="text-2xl font-bold text-purple-700 mb-4 flex items-center gap-2">
+                        <i data-lucide="cuboid" class="w-6 h-6"></i>
+                        Chemische Grundgrößen
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl flex flex-col transition-colors hover:bg-gray-100">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-xl text-gray-800">Stoffportion / Masse</h3>
+                                <span class="bg-white px-3 py-1 rounded-lg font-mono font-bold text-purple-700 shadow-sm border border-purple-100">m</span>
+                            </div>
+                            <p class="text-gray-600 mb-4 flex-grow">Eine mit unseren Mitteln (z.B. einer Waage) direkt bestimmbare, greifbare physikalische Größe.</p>
+                            <p class="text-gray-800 font-medium bg-white p-2 rounded-lg border border-gray-200 inline-block text-center shadow-sm">Einheit: <strong>1 g</strong> (Gramm)</p>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl flex flex-col transition-colors hover:bg-gray-100">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-xl text-gray-800">Stoffmenge</h3>
+                                <span class="bg-white px-3 py-1 rounded-lg font-mono font-bold text-purple-700 shadow-sm border border-purple-100">n</span>
+                            </div>
+                            <p class="text-gray-600 mb-3">Dient als "Abzähleinheit" für die unvorstellbar riesige Anzahl von Teilchen (vergleichbar mit Begriffen wie Paar oder Dutzend).</p>
+                            <p class="text-gray-800 font-medium bg-white p-2 rounded-lg border border-gray-200 inline-block text-center mb-3 shadow-sm">Einheit: <strong>1 mol</strong></p>
+                            
+                            <div class="bg-purple-100 p-3 rounded-xl text-sm text-purple-900 mt-auto border border-purple-200">
+                                <strong>Avogadro-Konstante (N<sub>A</sub>):</strong> Gibt an, wie viele Teilchen exakt in einem Mol enthalten sind.<br>
+                                <span class="font-mono font-bold block mt-1">N<sub>A</sub> = 6,022 &middot; 10<sup>23</sup> mol<sup>-1</sup></span>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl flex flex-col transition-colors hover:bg-gray-100">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-xl text-gray-800">Molare Masse</h3>
+                                <span class="bg-white px-3 py-1 rounded-lg font-mono font-bold text-purple-700 shadow-sm border border-purple-100">M</span>
+                            </div>
+                            <p class="text-gray-600 mb-3">Gibt die Masse von exakt 1 mol einer bestimmten Teilchenart an. Der Zahlenwert in g/mol entspricht exakt der Atommasse in u aus dem Periodensystem.</p>
+                            <p class="text-gray-800 font-medium bg-white p-2 rounded-lg border border-gray-200 inline-block text-center mb-3 shadow-sm">Einheit: <strong>1 g/mol</strong></p>
+                            
+                            <div class="bg-white p-3 rounded-xl text-sm text-gray-700 border border-gray-200 mt-auto shadow-sm">
+                                <p class="font-bold mb-1 text-purple-800">Bei Molekülen oder Ionen:</p>
+                                <p class="mb-1">Entspricht der Summe der molaren Massen der enthaltenen Atome. Beispiel für H<sub>2</sub>O:</p>
+                                <p class="font-mono text-xs break-words bg-gray-50 p-2 rounded mt-1">M(H<sub>2</sub>O) = 2 &middot; M(H) + M(O)<br>M(H<sub>2</sub>O) = 2 &middot; 1,008 g/mol + 16,00 g/mol<br>M(H<sub>2</sub>O) = 18,016 g/mol</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-200 p-5 rounded-2xl flex flex-col transition-colors hover:bg-gray-100">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-xl text-gray-800">Konzentration</h3>
+                                <span class="bg-white px-3 py-1 rounded-lg font-mono font-bold text-purple-700 shadow-sm border border-purple-100">c</span>
+                            </div>
+                            <p class="text-gray-600 mb-3">Eine quantitative Angabe der gelösten Teilchenzahl (Stoffmenge) pro Liter Lösungsmittel.</p>
+                            <p class="text-gray-800 font-medium bg-white p-2 rounded-lg border border-gray-200 inline-block text-center mb-3 shadow-sm">Einheit: <strong>1 mol/L</strong></p>
+                            
+                            <div class="bg-white p-3 rounded-xl text-sm text-gray-700 border border-gray-200 mt-auto shadow-sm">
+                                <p class="font-bold mb-1 text-purple-800">Beispiel: Kupfersulfatlösung</p>
+                                <p>1 mol festes Kupfersulfat wird in einen Messkolben gegeben. Dieser wird mit destilliertem Wasser auf exakt 1 L aufgefüllt. Die Konzentration beträgt nun c = 1 mol/L.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 border-l-8 border-teal-500 transition-all hover:shadow-md">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4 flex items-center gap-2">
+                        <i data-lucide="function-square" class="w-6 h-6"></i>
+                        Wichtige Formeln
+                    </h2>
+                    
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-col sm:flex-row items-center gap-4 bg-teal-50 p-4 rounded-2xl border border-teal-100">
+                            <div class="text-3xl font-mono font-bold text-teal-800 bg-white px-6 py-4 rounded-xl shadow-sm text-center min-w-[160px] border border-teal-50">
+                                n = m / M
+                            </div>
+                            <div class="text-teal-900 text-lg">
+                                <strong>Stoffmenge, Masse, Molare Masse</strong><br>
+                                Der klassische Weg, um die eingewogene Masse (in Gramm) in die chemische Stoffmenge (in mol) umzurechnen.
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row items-center gap-4 bg-teal-50 p-4 rounded-2xl border border-teal-100">
+                            <div class="text-3xl font-mono font-bold text-teal-800 bg-white px-6 py-4 rounded-xl shadow-sm text-center min-w-[160px] border border-teal-50">
+                                c = n / V
+                            </div>
+                            <div class="text-teal-900 text-lg">
+                                <strong>Konzentration, Stoffmenge, Volumen</strong><br>
+                                Gibt an, welche Stoffmenge n in einem bestimmten Volumen V (meist in Litern) einer Lösung gelöst ist.
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row items-center gap-4 bg-teal-50 p-4 rounded-2xl border border-teal-100">
+                            <div class="text-3xl font-mono font-bold text-teal-800 bg-white px-6 py-4 rounded-xl shadow-sm text-center min-w-[160px] border border-teal-50">
+                                n = V / V<sub>M</sub>
+                            </div>
+                            <div class="text-teal-900 text-lg">
+                                <strong>Nur bei Gasen!</strong><br>
+                                Berechnung über das Volumen V und das Molares Volumen V<sub>M</sub> = 22,4 L/mol (bei Standardbedingungen).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interaktive Beispielrechnung -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 border-l-8 border-orange-500 transition-all hover:shadow-md">
+                    <h2 class="text-2xl font-bold text-orange-700 mb-4 flex items-center gap-2">
+                        <i data-lucide="footprints" class="w-6 h-6"></i>
+                        Schritt-für-Schritt Beispielrechnung
+                    </h2>
+                    
+                    <div class="bg-orange-50 p-5 rounded-2xl mb-6 border border-orange-100 shadow-sm">
+                        <p class="font-bold text-orange-900 text-lg mb-2">Aufgabe:</p>
+                        <p class="text-gray-800 text-lg">Bei der Reaktion von Wasserstoff mit Sauerstoff entsteht Wasser. Berechne die zu verwendende Masse an Wasserstoff und Sauerstoff, wenn eine Masse von <strong>m = 1 kg Wasser</strong> bei der Reaktion entstehen soll.</p>
+                    </div>
+
+                    <!-- Step 1 -->
+                    <button id="btn-calc-step-1" onclick="revealCalcStep(1)" class="btn-tap btn-hover w-full bg-orange-100 text-orange-800 border-2 border-orange-300 py-3 rounded-xl font-bold text-lg mb-4 hover:bg-orange-200 transition-colors shadow-sm">
+                        Schritt 1: Reaktionsgleichung aufstellen
+                    </button>
+                    <div id="calc-step-1" class="hidden mb-6 pl-4 border-l-4 border-orange-300 reveal-anim">
+                        <p class="font-mono text-xl font-bold text-gray-800 mb-2 bg-gray-50 p-3 rounded-lg inline-block border border-gray-200">2 H<sub>2</sub> + O<sub>2</sub> &rarr; 2 H<sub>2</sub>O</p>
+                        <p class="text-gray-600">Das Stoffmengenverhältnis ist 2 : 1 : 2.</p>
+                        
+                        <button id="btn-calc-step-2" onclick="revealCalcStep(2)" class="btn-tap btn-hover mt-4 bg-orange-100 text-orange-800 border-2 border-orange-300 py-2 px-6 rounded-xl font-bold hover:bg-orange-200 transition-colors shadow-sm flex items-center gap-2">
+                            Weiter zu Schritt 2 <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div id="calc-step-2" class="hidden mb-6 pl-4 border-l-4 border-orange-300 reveal-anim">
+                        <h4 class="font-bold text-gray-700 mb-2">Gegebene Werte & Molare Massen:</h4>
+                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                            <p class="text-gray-800 mb-1">Gegeben: m(H<sub>2</sub>O) = 1 kg = <strong>1000 g</strong></p>
+                            <p class="text-gray-800 mb-1">M(H<sub>2</sub>O) = 2 &middot; 1 g/mol + 16 g/mol = <strong>18 g/mol</strong></p>
+                            <p class="text-gray-800 mb-1">M(H<sub>2</sub>) = <strong>2 g/mol</strong></p>
+                            <p class="text-gray-800">M(O<sub>2</sub>) = <strong>32 g/mol</strong></p>
+                        </div>
+                        
+                        <button id="btn-calc-step-3" onclick="revealCalcStep(3)" class="btn-tap btn-hover mt-4 bg-orange-100 text-orange-800 border-2 border-orange-300 py-2 px-6 rounded-xl font-bold hover:bg-orange-200 transition-colors shadow-sm flex items-center gap-2">
+                            Weiter zu Schritt 3 <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div id="calc-step-3" class="hidden mb-6 pl-4 border-l-4 border-orange-300 reveal-anim">
+                        <h4 class="font-bold text-gray-700 mb-2">Stoffmenge des Produkts:</h4>
+                        <p class="text-gray-600 mb-2">Wir berechnen die Stoffmenge n von Wasser (H<sub>2</sub>O) mit der Formel <strong>n = m / M</strong>:</p>
+                        <p class="font-mono text-lg text-gray-800 mb-2 bg-gray-50 p-3 rounded-lg border border-gray-200 inline-block">n(H<sub>2</sub>O) = 1000 g / 18 g/mol &approx; <strong>55,56 mol</strong></p>
+                        <br>
+                        
+                        <button id="btn-calc-step-4" onclick="revealCalcStep(4)" class="btn-tap btn-hover mt-4 bg-orange-100 text-orange-800 border-2 border-orange-300 py-2 px-6 rounded-xl font-bold hover:bg-orange-200 transition-colors shadow-sm flex items-center gap-2">
+                            Weiter zu Schritt 4 <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div id="calc-step-4" class="hidden mb-6 pl-4 border-l-4 border-orange-300 reveal-anim">
+                        <h4 class="font-bold text-gray-700 mb-2">Stoffmengen der Edukte:</h4>
+                        <p class="text-gray-600 mb-2">Aus dem Verhältnis der Reaktionsgleichung lesen wir ab:</p>
+                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm inline-block">
+                            <p class="text-gray-800 mb-1">n(H<sub>2</sub>) = n(H<sub>2</sub>O) = <strong>55,56 mol</strong></p>
+                            <p class="text-gray-800">n(O<sub>2</sub>) = 0,5 &middot; n(H<sub>2</sub>O) = <strong>27,78 mol</strong></p>
+                        </div>
+                        <br>
+
+                        <button id="btn-calc-step-5" onclick="revealCalcStep(5)" class="btn-tap btn-hover mt-4 bg-orange-100 text-orange-800 border-2 border-orange-300 py-2 px-6 rounded-xl font-bold hover:bg-orange-200 transition-colors shadow-sm flex items-center gap-2">
+                            Zum finalen Schritt <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div id="calc-step-5" class="hidden pl-4 border-l-4 border-green-500 reveal-anim">
+                        <h4 class="font-bold text-green-700 mb-2">Gesuchte Massen berechnen:</h4>
+                        <p class="text-gray-600 mb-3">Die Formel <strong>n = m / M</strong> wird umgestellt zu <strong>m = n &middot; M</strong>:</p>
+                        <div class="bg-white p-4 rounded-xl border border-green-200 shadow-sm mb-4 inline-block">
+                            <p class="font-mono text-lg text-gray-800 mb-2 border-b border-gray-100 pb-2">m(H<sub>2</sub>) = 55,56 mol &middot; 2 g/mol &approx; <strong class="text-green-700">111,1 g</strong></p>
+                            <p class="font-mono text-lg text-gray-800 pt-1">m(O<sub>2</sub>) = 27,78 mol &middot; 32 g/mol &approx; <strong class="text-green-700">888,9 g</strong></p>
+                        </div>
+                        <div class="bg-green-100 p-4 rounded-xl text-green-800 font-bold flex items-center gap-3 border border-green-300 shadow-sm">
+                            <i data-lucide="check-circle" class="w-6 h-6 flex-shrink-0"></i>
+                            Probe: 111,1 g + 888,9 g = 1000 g (exakt 1 kg Wasser)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEU: Übungsaufgabe -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 border-l-8 border-red-500 transition-all hover:shadow-md">
+                    <h2 class="text-2xl font-bold text-red-700 mb-4 flex items-center gap-2">
+                        <i data-lucide="pen-tool" class="w-6 h-6"></i>
+                        Deine Übungsaufgabe
+                    </h2>
+                    
+                    <div class="bg-red-50 p-5 rounded-2xl mb-6 border border-red-100 shadow-sm">
+                        <p class="text-gray-800 text-lg mb-4">In einer chemischen Reaktion reagieren Magnesium und Salzsäure miteinander zu Wasserstoffgas und Magnesium-Ionen.</p>
+                        <p class="font-mono text-xl font-bold text-center bg-white p-4 rounded-xl shadow-sm text-red-900 mb-4 border border-red-100">
+                            Mg + 2 H<sup>+</sup> &rarr; H<sub>2</sub> + Mg<sup>2+</sup>
+                        </p>
+                        <p class="text-gray-800 text-lg font-bold">Bei der Reaktion entstehen 100 g Wasserstoffgas. Berechne die verbrauchte Masse m(Mg).</p>
+                    </div>
+
+                    <button onclick="toggleAccordion('uebung-loesung')" class="btn-tap btn-hover w-full bg-red-100 text-red-800 border-2 border-red-300 py-3 rounded-xl font-bold text-lg hover:bg-red-200 transition-colors flex justify-between items-center px-6 shadow-sm">
+                        <span>Lösung anzeigen</span>
+                        <i data-lucide="chevron-down" id="uebung-loesung-icon" class="transition-transform duration-300"></i>
+                    </button>
+
+                    <div id="uebung-loesung-content" class="hidden mt-4 pl-4 border-l-4 border-red-300 reveal-anim">
+                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                            <p class="text-gray-800 mb-3 border-b border-gray-100 pb-2"><strong>1. Gegeben:</strong> m(H<sub>2</sub>) = 100 g, M(H<sub>2</sub>) = 2 g/mol, M(Mg) &approx; 24,3 g/mol</p>
+                            <p class="text-gray-800 mb-3 border-b border-gray-100 pb-2"><strong>2. Stoffmenge Produkt:</strong> n(H<sub>2</sub>) = 100 g / 2 g/mol = 50 mol</p>
+                            <p class="text-gray-800 mb-3 border-b border-gray-100 pb-2"><strong>3. Stoffmengenverhältnis:</strong> Laut Gleichung 1 : 1, also n(Mg) = n(H<sub>2</sub>) = 50 mol</p>
+                            <p class="text-gray-800"><strong>4. Gesuchte Masse:</strong> m(Mg) = 50 mol &middot; 24,3 g/mol = <strong class="text-red-700 text-xl bg-red-50 px-2 py-1 rounded">1215 g (bzw. 1,215 kg)</strong></p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- ==========================================
+                 WISSENSREITER 1: Reaktionsgeschwindigkeit
+                 ========================================== -->
+            <div id="tab-wr1" class="tab-content">
+                
+                <!-- Theorie: Grundlagen & Beispiele -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 border-l-8 border-primary transition-all hover:shadow-md">
+                    <h2 class="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-6 h-6"></i>
+                        Was ist die Reaktionsgeschwindigkeit?
+                    </h2>
+                    <p class="mb-4 text-lg">
+                        Chemische Reaktionen laufen unterschiedlich schnell ab. Die <strong>Reaktionsgeschwindigkeit</strong> gibt an, wie schnell die Konzentration der Ausgangsstoffe (Edukte) abnimmt oder die der Endstoffe (Produkte) zunimmt.
+                    </p>
+                    
+                    <div class="bg-light p-5 rounded-2xl mt-4 mb-2">
+                        <h3 class="font-bold text-primary text-xl mb-3 flex items-center gap-2">
+                            <i data-lucide="zap" class="w-5 h-5"></i> Beispiele aus dem Alltag
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm transition-transform hover:-translate-y-1">
+                                <span class="text-3xl">🐌</span>
+                                <div>
+                                    <p class="font-bold text-gray-800">Sehr langsam</p>
+                                    <p class="text-gray-600">Das Rosten von Eisen (Korrosion) dauert oft Jahre.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm transition-transform hover:-translate-y-1">
+                                <span class="text-3xl">🚶</span>
+                                <div>
+                                    <p class="font-bold text-gray-800">Mittelmäßig</p>
+                                    <p class="text-gray-600">Das Gären von Traubensaft zu Wein dauert Wochen bis Monate.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm transition-transform hover:-translate-y-1">
+                                <span class="text-3xl">🚀</span>
+                                <div>
+                                    <p class="font-bold text-gray-800">Extrem schnell</p>
+                                    <p class="text-gray-600">Die Knallgasreaktion (Explosion) läuft in Bruchteilen einer Sekunde ab.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Theorie: Mathematische Beschreibung -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 border-l-8 border-accent transition-all hover:shadow-md">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i data-lucide="calculator" class="w-6 h-6 text-accent"></i>
+                        Mathematische Beschreibung
+                    </h2>
+                    <p class="mb-5 text-lg text-gray-600">
+                        Um die Geschwindigkeit einer Reaktion exakt zu beschreiben, nutzt man in der Chemie Geschwindigkeitsgesetze. 
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm transition-colors hover:bg-white">
+                            <div class="font-mono text-2xl text-primary font-bold mb-2">v = &Delta;c / &Delta;t</div>
+                            <p class="text-gray-700"><strong>Die Grundgleichung:</strong> Die Reaktionsgeschwindigkeit (v) ist definiert als die Änderung der Konzentration (&Delta;c) in einem bestimmten Zeitintervall (&Delta;t).</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm transition-colors hover:bg-white">
+                            <div class="font-mono text-2xl text-primary font-bold mb-2">v = k &middot; c</div>
+                            <p class="text-gray-700"><strong>Abhängigkeit von einem Stoff:</strong> Bei vielen einfachen Reaktionen ist die Geschwindigkeit direkt proportional zur Konzentration (c) des Edukts. Der Faktor <strong>k</strong> ist die sogenannte Geschwindigkeitskonstante (ein fester Wert für eine bestimmte Reaktion bei einer bestimmten Temperatur).</p>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm transition-colors hover:bg-white">
+                            <div class="font-mono text-2xl text-primary font-bold mb-2">v = k &middot; c(A) &middot; c(B)</div>
+                            <p class="text-gray-700"><strong>Abhängigkeit von zwei Stoffen:</strong> Wenn zwei verschiedene Edukte (A und B) miteinander reagieren, hängt die Wahrscheinlichkeit eines Zusammenstoßes von den Konzentrationen beider Stoffe ab. Man multipliziert in diesem Geschwindigkeitsgesetz die Konzentrationen beider Stoffe miteinander.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Theorie: Einflussfaktoren (Accordions) -->
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 mt-8 flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-6 h-6"></i>
+                    Einflussfaktoren der Reaktionsgeschwindigkeit
+                </h2>
+                <p class="text-gray-600 mb-6 text-lg">Tippe auf die Balken, um zu erfahren, wie sich Reaktionen beschleunigen lassen.</p>
+
+                <!-- Accordion 1: Konzentration & Kollisionsmodell -->
+                <div class="mb-4 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 font-bold text-primary text-xl bg-white focus:outline-none" onclick="toggleAccordion('acc-konz')">
+                        <span class="flex items-center gap-3"><i data-lucide="box" class="w-6 h-6"></i> 1. Konzentration & Kollisionsmodell</span>
+                        <i data-lucide="chevron-down" id="acc-konz-icon" class="transition-transform duration-300"></i>
+                    </button>
+                    <div id="acc-konz-content" class="hidden p-5 pt-0 text-lg text-gray-700 bg-white reveal-anim">
+                        <div class="border-t border-gray-100 pt-4 mt-2">
+                            <p class="mb-3">Je <strong>höher die Konzentration</strong> der Edukte, desto schneller verläuft die Reaktion.</p>
+                            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-blue-900 shadow-sm">
+                                <p class="font-bold mb-2 text-blue-800">Erklärung durch das Kollisionsmodell (Stoßtheorie):</p>
+                                <p>Damit eine Reaktion stattfindet, müssen Teilchen zusammenstoßen (Kollision). Wenn die Konzentration hoch ist, befinden sich <strong>mehr Teilchen im gleichen Volumen</strong>. Dadurch kommt es viel häufiger zu Zusammenstößen. Folglich gibt es pro Zeiteinheit auch mehr <strong>effektive Stöße</strong> (Stöße mit ausreichender Energie und passender Orientierung).</p>
+                                
+                                <!-- Visualisierung Canvas -->
+                                <div class="mt-5 bg-white p-4 rounded-xl shadow-sm border border-blue-100">
+                                    <p class="font-bold text-primary text-lg mb-2 flex items-center gap-2"><i data-lucide="mouse-pointer-2" class="w-5 h-5"></i> Interaktive Visualisierung</p>
+                                    <div class="w-full bg-blue-50 rounded-lg shadow-inner border border-blue-200 mb-4 overflow-hidden" id="canvas-container">
+                                        <canvas id="collisionCanvas" width="600" height="200" class="w-full block"></canvas>
+                                    </div>
+                                    
+                                    <div class="flex flex-wrap gap-2 mb-3">
+                                        <button onclick="addParticles()" class="btn-tap btn-hover bg-blue-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm">
+                                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Konzentration erhöhen
+                                        </button>
+                                        <button onclick="increaseTemp()" class="btn-tap btn-hover bg-red-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm">
+                                            <i data-lucide="thermometer-sun" class="w-4 h-4"></i> Temperatur erhöhen
+                                        </button>
+                                        <button onclick="resetCanvasAnim()" class="btn-tap btn-hover bg-gray-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm">
+                                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset
+                                        </button>
+                                    </div>
+                                    <div class="text-sm font-mono text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200" id="collision-stats">
+                                        Beobachtete Stöße: 0 | Teilchen: 10 | Geschwindigkeitsfaktor: 1.0x
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accordion 2: Temperatur -->
+                <div class="mb-4 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 font-bold text-primary text-xl bg-white focus:outline-none" onclick="toggleAccordion('acc-temp')">
+                        <span class="flex items-center gap-3"><i data-lucide="thermometer" class="w-6 h-6"></i> 2. Temperatur</span>
+                        <i data-lucide="chevron-down" id="acc-temp-icon" class="transition-transform duration-300"></i>
+                    </button>
+                    <div id="acc-temp-content" class="hidden p-5 pt-0 text-lg text-gray-700 bg-white reveal-anim">
+                        <div class="border-t border-gray-100 pt-4 mt-2">
+                            <p class="mb-3">Je <strong>höher die Temperatur</strong>, desto schneller verläuft die Reaktion.</p>
+                            <div class="bg-red-50 p-4 rounded-xl border border-red-100 text-red-900 mb-3 shadow-sm">
+                                <p class="font-bold mb-2 text-red-800">Die RGT-Regel (Reaktionsgeschwindigkeits-Temperatur-Regel):</p>
+                                <p>Eine Temperaturerhöhung um 10 K (Kelvin bzw. Grad Celsius) führt zu einer <strong>Verdopplung bis Vervierfachung</strong> der Reaktionsgeschwindigkeit.</p>
+                            </div>
+                            <p><strong>Auf Teilchenebene:</strong> Wärme ist kinetische Energie. Bei höherer Temperatur bewegen sich die Teilchen schneller. Dadurch stoßen sie nicht nur häufiger zusammen, sondern vor allem viel <strong>heftiger</strong>. Der Anteil der Teilchen, die die nötige Aktivierungsenergie besitzen, steigt enorm an.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accordion 3: Zerteilungsgrad -->
+                <div class="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+                    <button class="btn-tap w-full flex justify-between items-center p-5 font-bold text-primary text-xl bg-white focus:outline-none" onclick="toggleAccordion('acc-zert')">
+                        <span class="flex items-center gap-3"><i data-lucide="scatter-chart" class="w-6 h-6"></i> 3. Zerteilungsgrad</span>
+                        <i data-lucide="chevron-down" id="acc-zert-icon" class="transition-transform duration-300"></i>
+                    </button>
+                    <div id="acc-zert-content" class="hidden p-5 pt-0 text-lg text-gray-700 bg-white reveal-anim">
+                        <div class="border-t border-gray-100 pt-4 mt-2">
+                            <p class="mb-3">Je <strong>größer der Zerteilungsgrad</strong> (also je feiner ein Feststoff zerkleinert ist), desto schneller verläuft die Reaktion.</p>
+                            <p class="mb-3"><strong>Auf Teilchenebene:</strong> Reaktionen finden bei Feststoffen nur an der <strong>Oberfläche</strong> statt, da die Reaktionspartner nicht in das Innere eindringen können. Zerteilt man einen großen Block in viele kleine Stücke oder zu Pulver, vergrößert sich die Gesamtoberfläche drastisch. Es gibt viel mehr Kontaktfläche für effektive Stöße.</p>
+                            <div class="bg-light p-4 rounded-xl text-primary font-medium shadow-sm">
+                                Beispiel: Ein kompakter Holzklotz brennt langsam, feine Holzspäne oder Holzstaub verbrennen blitzschnell.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 mt-12">Aktivitäten zur Festigung</h2>
+
+                <!-- Aktivität 1: Wahr/Falsch (3 Aussagen) -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 transition-all hover:shadow-md">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-accent p-2 rounded-xl text-white"><i data-lucide="check-square" class="w-6 h-6"></i></div>
+                        <h3 class="text-xl font-bold">Aktivität 1: Wahr oder Falsch?</h3>
+                    </div>
+                    <p class="mb-6 text-gray-600">Bewerte die folgenden 3 Aussagen zur Reaktionskinetik.</p>
+                    
+                    <!-- Aussage 1 -->
+                    <div class="wf-card bg-gray-50" id="wf1-container">
+                        <p class="text-xl text-gray-800 mb-4 text-center">1. "Wenn ich mehr von Stoff A in ein Gefäß gebe, verringert sich die Wahrscheinlichkeit eines effektiven Stoßes, weil die Teilchen weniger Platz haben."</p>
+                        <div class="flex gap-4">
+                            <button onclick="checkWF(1, true)" class="btn-tap btn-hover flex-1 bg-white border-2 border-primary text-primary py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                                <i data-lucide="check" class="w-5 h-5"></i> Wahr
+                            </button>
+                            <button onclick="checkWF(1, false)" class="btn-tap btn-hover flex-1 bg-white border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                                <i data-lucide="x" class="w-5 h-5"></i> Falsch
+                            </button>
+                        </div>
+                        <div id="wf1-feedback" class="mt-4 hidden p-4 rounded-xl text-lg font-medium text-center reveal-anim"></div>
+                    </div>
+
+                    <!-- Aussage 2 -->
+                    <div class="wf-card bg-gray-50" id="wf2-container">
+                        <p class="text-xl text-gray-800 mb-4 text-center">2. "Laut der RGT-Regel führt eine Erhöhung der Temperatur um 10 °C meist zu einer Verdopplung bis Vervierfachung der Reaktionsgeschwindigkeit."</p>
+                        <div class="flex gap-4">
+                            <button onclick="checkWF(2, true)" class="btn-tap btn-hover flex-1 bg-white border-2 border-primary text-primary py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                                <i data-lucide="check" class="w-5 h-5"></i> Wahr
+                            </button>
+                            <button onclick="checkWF(2, false)" class="btn-tap btn-hover flex-1 bg-white border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                                <i data-lucide="x" class="w-5 h-5"></i> Falsch
+                            </button>
+                        </div>
+                        <div id="wf2-feedback" class="mt-4 hidden p-4 rounded-xl text-lg font-medium text-center reveal-anim"></div>
+                    </div>
+
+                    <!-- Aussage 3 -->
+                    <div class="wf-card bg-gray-50" id="wf3-container">
+                        <p class="text-xl text-gray-800 mb-4 text-center">3. "Ein massiver Holzklotz brennt schneller als die gleiche Menge an feinen Holzspänen, da er mehr Energie im Kern speichern kann."</p>
+                        <div class="flex gap-4">
+                            <button onclick="checkWF(3, true)" class="btn-tap btn-hover flex-1 bg-white border-2 border-primary text-primary py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                                <i data-lucide="check" class="w-5 h-5"></i> Wahr
+                            </button>
+                            <button onclick="checkWF(3, false)" class="btn-tap btn-hover flex-1 bg-white border-2 border-red-500 text-red-500 py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2">
+                                <i data-lucide="x" class="w-5 h-5"></i> Falsch
+                            </button>
+                        </div>
+                        <div id="wf3-feedback" class="mt-4 hidden p-4 rounded-xl text-lg font-medium text-center reveal-anim"></div>
+                    </div>
+                </div>
+
+                <!-- Aktivität 2: Lückentext -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 transition-all hover:shadow-md">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-accent p-2 rounded-xl text-white"><i data-lucide="form-input" class="w-6 h-6"></i></div>
+                        <h3 class="text-xl font-bold">Aktivität 2: Lückentext Einflussfaktoren</h3>
+                    </div>
+                    <p class="mb-4 text-gray-600">Wähle die passenden Begriffe aus dem Dropdown-Menü, um die Kernaussagen zu vervollständigen.</p>
+                    
+                    <div class="bg-gray-50 p-6 rounded-2xl text-xl leading-loose border-2 border-dashed border-gray-300">
+                        Laut dem Kollisionsmodell führt eine höhere 
+                        <select id="lt-1" class="border-2 border-primary rounded-lg p-2 mx-1 text-primary font-bold bg-white outline-none cursor-pointer shadow-sm">
+                            <option value="">[...]</option>
+                            <option value="temperatur">Temperatur</option>
+                            <option value="konzentration">Konzentration</option>
+                            <option value="druck">Druck</option>
+                            <option value="katalysator">Katalysator</option>
+                        </select> 
+                        dazu, dass sich mehr Teilchen in einem bestimmten Volumen befinden. Dies erhöht die Anzahl der 
+                        <select id="lt-2" class="border-2 border-primary rounded-lg p-2 mx-1 text-primary font-bold bg-white outline-none cursor-pointer shadow-sm">
+                            <option value="">[...]</option>
+                            <option value="effektiven">effektiven</option>
+                            <option value="langsamen">langsamen</option>
+                            <option value="unelastischen">unelastischen</option>
+                            <option value="staendigen">ständigen</option>
+                        </select> 
+                        Stöße pro Zeit. Eine Temperaturerhöhung wiederum sorgt dafür, dass sich die Teilchen 
+                        <select id="lt-3" class="border-2 border-primary rounded-lg p-2 mx-1 text-primary font-bold bg-white outline-none cursor-pointer shadow-sm">
+                            <option value="">[...]</option>
+                            <option value="schneller">schneller</option>
+                            <option value="langsamer">langsamer</option>
+                            <option value="garnicht">gar nicht</option>
+                            <option value="rueckwaerts">rückwärts</option>
+                        </select> 
+                        bewegen und somit häufiger die nötige 
+                        <select id="lt-4" class="border-2 border-primary rounded-lg p-2 mx-1 text-primary font-bold bg-white outline-none cursor-pointer shadow-sm">
+                            <option value="">[...]</option>
+                            <option value="reaktionswaerme">Reaktionswärme</option>
+                            <option value="aktivierungsenergie">Aktivierungsenergie</option>
+                            <option value="bindungsenergie">Bindungsenergie</option>
+                            <option value="schmelzwaerme">Schmelzwärme</option>
+                        </select> 
+                        erreichen.
+                    </div>
+                    
+                    <button onclick="checkLueckentext()" class="btn-tap btn-hover mt-6 bg-primary text-white py-3 px-8 rounded-xl font-bold text-xl flex items-center gap-2 shadow-md">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i> Text prüfen
+                    </button>
+                    <div id="lt-feedback" class="mt-4 hidden p-4 rounded-xl text-lg font-medium reveal-anim"></div>
+                </div>
+
+                <!-- Aktivität 3: Miniquiz -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 transition-all hover:shadow-md" id="quiz-container">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-accent p-2 rounded-xl text-white"><i data-lucide="help-circle" class="w-6 h-6"></i></div>
+                            <h3 class="text-xl font-bold">Aktivität 3: Miniquiz Reaktionskinetik</h3>
+                        </div>
+                        <div class="bg-light px-4 py-2 rounded-full font-bold text-primary shadow-inner" id="quiz-progress">0 / 5</div>
+                    </div>
+                    
+                    <div id="quiz-start-screen" class="text-center py-8 reveal-anim">
+                        <p class="mb-6 text-gray-600 text-lg">Bist du bereit? Es werden 5 zufällige Fragen aus unserem großen Aufgabenpool gezogen.</p>
+                        <button onclick="startQuiz()" class="btn-tap btn-hover inline-block bg-primary text-white py-4 px-10 rounded-2xl font-bold text-xl shadow-lg">
+                            Quiz starten
+                        </button>
+                    </div>
+
+                    <div id="quiz-game-screen" class="hidden reveal-anim">
+                        <h4 id="quiz-question" class="text-2xl font-bold text-gray-800 mb-6 bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-sm"></h4>
+                        <div id="quiz-options" class="flex flex-col gap-3 mb-6">
+                            <!-- Options injected via JS -->
+                        </div>
+                        <div id="quiz-feedback" class="hidden p-4 rounded-xl text-lg font-medium mb-4 reveal-anim"></div>
+                        <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="btn-tap btn-hover hidden w-full bg-secondary text-white py-4 rounded-2xl font-bold text-xl shadow-md flex justify-center items-center gap-2">
+                            Nächste Frage <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div id="quiz-end-screen" class="hidden text-center py-8 reveal-anim">
+                        <div class="text-6xl mb-4 transform hover:scale-110 transition-transform duration-300">🏆</div>
+                        <h4 class="text-3xl font-bold text-primary mb-2">Quiz beendet!</h4>
+                        <p class="text-xl text-gray-600 mb-6">Du hast <strong id="quiz-score" class="text-3xl text-primary px-2">0</strong> von 5 Fragen richtig beantwortet.</p>
+                        <button onclick="startQuiz()" class="btn-tap btn-hover inline-block bg-white border-2 border-primary text-primary py-3 px-8 rounded-2xl font-bold text-xl shadow-sm flex justify-center items-center gap-2 mx-auto">
+                            <i data-lucide="rotate-ccw" class="w-5 h-5"></i> Nochmal spielen
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==========================================
+                 WISSENSREITER: Fachsprache
+                 ========================================== -->
+            <div id="tab-fachsprache" class="tab-content">
+                
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-8 transition-all hover:shadow-md">
+                    <h2 class="text-2xl font-bold text-primary mb-6 flex items-center gap-2">
+                        <i data-lucide="languages" class="w-6 h-6"></i>
+                        Fachsprache & Glossar
+                    </h2>
+                    
+                    <!-- Glossar erweitert -->
+                    <h3 class="font-bold text-xl mb-4 bg-light p-3 rounded-xl inline-block shadow-sm">Wichtiges Fachvokabular</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        
+                        <!-- Neue Begriffe: Chemisches Rechnen -->
+                        <div class="border border-gray-200 p-4 rounded-xl bg-purple-50 transition-colors hover:bg-purple-100">
+                            <p class="font-bold text-purple-800 text-lg">Stoffmenge (n)</p>
+                            <p class="text-gray-700">"Abzähleinheit" für Teilchen in der Chemie. Einheit: mol.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl bg-purple-50 transition-colors hover:bg-purple-100">
+                            <p class="font-bold text-purple-800 text-lg">Molare Masse (M)</p>
+                            <p class="text-gray-700">Gibt an, welche Masse exakt 1 mol einer Substanz hat. Einheit: g/mol.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl bg-purple-50 transition-colors hover:bg-purple-100">
+                            <p class="font-bold text-purple-800 text-lg">Avogadro-Konstante (N<sub>A</sub>)</p>
+                            <p class="text-gray-700">Naturkonstante (6,022 &middot; 10<sup>23</sup>), die angibt, wie viele Teilchen exakt in einem Mol enthalten sind.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl bg-purple-50 transition-colors hover:bg-purple-100">
+                            <p class="font-bold text-purple-800 text-lg">Konzentration (c)</p>
+                            <p class="text-gray-700">Quantitative Angabe der gelösten Stoffmenge pro Liter Lösung. Einheit: mol/L.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl bg-purple-50 transition-colors hover:bg-purple-100">
+                            <p class="font-bold text-purple-800 text-lg">Molares Volumen (V<sub>M</sub>)</p>
+                            <p class="text-gray-700">Das Volumen, welches exakt 1 mol eines beliebigen idealen Gases einnimmt (bei Standardbedingungen 22,4 L/mol).</p>
+                        </div>
+                        
+                        <!-- Bestehende Begriffe -->
+                        <div class="border border-gray-200 p-4 rounded-xl transition-colors hover:bg-gray-50">
+                            <p class="font-bold text-primary text-lg">Kollisionsmodell</p>
+                            <p class="text-gray-700">Modell, das besagt, dass Teilchen zusammenstoßen müssen, um chemisch miteinander zu reagieren.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl transition-colors hover:bg-gray-50">
+                            <p class="font-bold text-primary text-lg">Reaktionskinetik</p>
+                            <p class="text-gray-700">Der Teilbereich der Chemie, der sich mit der Geschwindigkeit von Reaktionen und deren Beeinflussung beschäftigt.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl transition-colors hover:bg-gray-50">
+                            <p class="font-bold text-primary text-lg">Reaktionsgeschwindigkeit</p>
+                            <p class="text-gray-700">Die Rate, mit der die Konzentration der Reaktanten abnimmt oder die der Produkte zunimmt.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl transition-colors hover:bg-gray-50">
+                            <p class="font-bold text-primary text-lg">Aktivierungsenergie</p>
+                            <p class="text-gray-700">Die minimale Energie, die benötigt wird, um eine chemische Reaktion überhaupt zu starten.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl transition-colors hover:bg-gray-50">
+                            <p class="font-bold text-primary text-lg">Katalysator</p>
+                            <p class="text-gray-700">Eine Substanz, die die Reaktionsgeschwindigkeit erhöht, ohne dabei selbst dauerhaft verbraucht zu werden.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl transition-colors hover:bg-gray-50">
+                            <p class="font-bold text-primary text-lg">Geschwindigkeitskonstante (k)</p>
+                            <p class="text-gray-700">Ein proportionaler, temperaturabhängiger Faktor im Geschwindigkeitsgesetz einer spezifischen Reaktion.</p>
+                        </div>
+                        <div class="border border-gray-200 p-4 rounded-xl transition-colors hover:bg-gray-50">
+                            <p class="font-bold text-primary text-lg">Kelvin (K)</p>
+                            <p class="text-gray-700">Die physikalische Basis-Einheit der Temperatur. Eine Temperaturänderung von 10 K entspricht exakt einer Änderung von 10 °C.</p>
+                        </div>
+                    </div>
+
+                    <!-- Scaffoldings (Erweitert) -->
+                    <h3 class="font-bold text-xl mb-4 bg-light p-3 rounded-xl inline-block mt-4 shadow-sm">Scaffoldings (Formulierungshilfen)</h3>
+                    <p class="text-gray-600 mb-4">Nutze diese Bausteine, um in Klausuren oder im Unterricht fachsprachlich präzise zu argumentieren.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-purple-50 p-5 rounded-2xl border border-purple-100 md:col-span-2 shadow-sm transition-transform hover:-translate-y-1">
+                            <p class="font-bold mb-2 text-purple-800">Beim chemischen Rechnen:</p>
+                            <ul class="list-disc list-inside space-y-2 text-purple-900">
+                                <li>"Aus der Reaktionsgleichung lässt sich das exakte Stoffmengenverhältnis ablesen. 1 mol Stoff A reagiert demnach mit..."</li>
+                                <li>"Um die eingewogene Masse in die Stoffmenge umzurechnen, dividiert man durch..."</li>
+                                <li>"Die molare Masse des Moleküls berechnet sich aus der Summe der..."</li>
+                            </ul>
+                        </div>
+                        <div class="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm transition-transform hover:-translate-y-1">
+                            <p class="font-bold mb-2 text-blue-800">Einfluss der Konzentration erklären:</p>
+                            <ul class="list-disc list-inside space-y-2 text-blue-900">
+                                <li>"Aus der Reaktionsgleichung lässt sich ableiten, dass..."</li>
+                                <li>"Erhöht man die Konzentration der Edukte, dann..."</li>
+                                <li>"Nach dem Kollisionsmodell führt dies zu mehr Teilchen pro Volumen..."</li>
+                                <li>"Folglich steigt die Wahrscheinlichkeit für effektive Stöße..."</li>
+                            </ul>
+                        </div>
+                        <div class="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-sm transition-transform hover:-translate-y-1">
+                            <p class="font-bold mb-2 text-red-800">Einfluss der Temperatur (RGT-Regel):</p>
+                            <ul class="list-disc list-inside space-y-2 text-red-900">
+                                <li>"Eine Temperaturerhöhung führt dazu, dass sich die Teilchen im Durchschnitt schneller bewegen."</li>
+                                <li>"Der Anteil der Teilchen, deren kinetische Energie größer als die Aktivierungsenergie ist, steigt..."</li>
+                                <li>"Somit kommt es pro Zeiteinheit zu deutlich mehr effektiven Stößen."</li>
+                            </ul>
+                        </div>
+                        <div class="bg-green-50 p-5 rounded-2xl border border-green-100 md:col-span-2 shadow-sm transition-transform hover:-translate-y-1">
+                            <p class="font-bold mb-2 text-green-800">Den Zerteilungsgrad beschreiben:</p>
+                            <ul class="list-disc list-inside space-y-2 text-green-900">
+                                <li>"Je feiner ein Feststoff zerkleinert ist, desto größer ist seine..."</li>
+                                <li>"Da Feststoffe nur an der Oberfläche reagieren können, bietet ein Pulver..."</li>
+                                <li>"Mehr Angriffsfläche bedeutet eine höhere Kollisionswahrscheinlichkeit und somit..."</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JavaScript Logik -->
+    <script>
+        // Init App and default view
+        function initApp() {
+            lucide.createIcons();
+            switchTab('wdhl');
+            
+            // Listen for window resize to keep canvas responsive
+            window.addEventListener('resize', function() {
+                if (isCanvasRunning && document.getElementById('tab-wr1').classList.contains('active')) {
+                    resizeCanvas();
+                }
+            });
+        }
+
+        // --- Step-by-Step Calculation Logic ---
+        function revealCalcStep(step) {
+            var stepContent = document.getElementById('calc-step-' + step);
+            var btn = document.getElementById('btn-calc-step-' + step);
+            
+            if (stepContent) stepContent.classList.remove('hidden');
+            if (btn) btn.classList.add('hidden');
+            
+            lucide.createIcons();
+        }
+
+        // --- Canvas Animation: Kollisionsmodell ---
+        var collisionCanvas = document.getElementById('collisionCanvas');
+        var canvasContainer = document.getElementById('canvas-container');
+        var ctx = collisionCanvas ? collisionCanvas.getContext('2d') : null;
+        var animParticles = [];
+        var animId;
+        var baseAnimSpeed = 1.5;
+        var tempMultiplier = 1;
+        var totalCollisions = 0;
+        var isCanvasRunning = false;
+
+        function resizeCanvas() {
+            if(!collisionCanvas || !canvasContainer) return;
+            var rect = canvasContainer.getBoundingClientRect();
+            // Set actual canvas resolution to match container width
+            collisionCanvas.width = rect.width;
+            collisionCanvas.height = 200; // Fixed height for consistent gameplay/simulation
+        }
+
+        function initCanvas() {
+            if(!collisionCanvas) return;
+            resizeCanvas();
+            animParticles = [];
+            tempMultiplier = 1;
+            totalCollisions = 0;
+            createAnimParticles(10); 
+            updateAnimStats();
+            
+            if(!isCanvasRunning) {
+                isCanvasRunning = true;
+                requestAnimationFrame(animateCanvas);
+            }
+        }
+
+        function createAnimParticles(num) {
+            for(var i=0; i<num; i++) {
+                animParticles.push({
+                    x: Math.random() * (collisionCanvas.width - 20) + 10,
+                    y: Math.random() * (collisionCanvas.height - 20) + 10,
+                    vx: (Math.random() - 0.5) * 4 * baseAnimSpeed,
+                    vy: (Math.random() - 0.5) * 4 * baseAnimSpeed,
+                    radius: 8,
+                    highlightFrames: 0
+                });
+            }
+        }
+
+        function animateCanvas() {
+            if(!ctx || !isCanvasRunning) return;
+            
+            ctx.clearRect(0, 0, collisionCanvas.width, collisionCanvas.height);
+            var didCollideThisFrame = false;
+
+            // Physics Update
+            for(var i=0; i<animParticles.length; i++) {
+                var p = animParticles[i];
+                p.x += p.vx * tempMultiplier;
+                p.y += p.vy * tempMultiplier;
+                
+                // Boundary bounces
+                if(p.x <= p.radius) { p.x = p.radius; p.vx *= -1; }
+                if(p.x >= collisionCanvas.width - p.radius) { p.x = collisionCanvas.width - p.radius; p.vx *= -1; }
+                if(p.y <= p.radius) { p.y = p.radius; p.vy *= -1; }
+                if(p.y >= collisionCanvas.height - p.radius) { p.y = collisionCanvas.height - p.radius; p.vy *= -1; }
+
+                // Elastic Collision with other particles (Bugfix: Vector-based overlap resolution)
+                for(var j=i+1; j<animParticles.length; j++) {
+                    var p2 = animParticles[j];
+                    var dx = p2.x - p.x;
+                    var dy = p2.y - p.y;
+                    var dist = Math.sqrt(dx*dx + dy*dy);
+                    var radSum = p.radius + p2.radius;
+                    
+                    if(dist < radSum && dist > 0) {
+                        // 1. Resolve Overlap (Anti-Sticking)
+                        var overlap = radSum - dist;
+                        var nx = dx / dist; // Normal X
+                        var ny = dy / dist; // Normal Y
+                        
+                        // Push particles apart equally
+                        p.x -= nx * (overlap / 2);
+                        p.y -= ny * (overlap / 2);
+                        p2.x += nx * (overlap / 2);
+                        p2.y += ny * (overlap / 2);
+                        
+                        // 2. Velocity Exchange (1D elastic collision along normal)
+                        var vn1 = p.vx * nx + p.vy * ny;
+                        var vn2 = p2.vx * nx + p2.vy * ny;
+                        
+                        // Only exchange if they are moving towards each other
+                        if (vn1 > vn2) {
+                            // Equal mass -> simply swap normal velocities
+                            p.vx += (vn2 - vn1) * nx;
+                            p.vy += (vn2 - vn1) * ny;
+                            p2.vx += (vn1 - vn2) * nx;
+                            p2.vy += (vn1 - vn2) * ny;
+                            
+                            p.highlightFrames = 15;
+                            p2.highlightFrames = 15;
+                            totalCollisions++;
+                            didCollideThisFrame = true;
+                        }
+                    }
+                }
+                
+                // Draw Particle
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                if(p.highlightFrames > 0) {
+                    ctx.fillStyle = '#ef4444'; // Red collision flash
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
+                    p.highlightFrames--;
+                } else {
+                    ctx.fillStyle = '#3d7c47'; // Normal green
+                    ctx.shadowBlur = 0;
+                }
+                ctx.fill();
+                ctx.closePath();
+                ctx.shadowBlur = 0;
+            }
+            
+            if(didCollideThisFrame) {
+                updateAnimStats();
+            }
+
+            animId = requestAnimationFrame(animateCanvas);
+        }
+
+        function addParticles() {
+            if(animParticles.length >= 100) return; // Prevent performance limit
+            createAnimParticles(10);
+            updateAnimStats();
+        }
+
+        function increaseTemp() {
+            if(tempMultiplier < 4.0) {
+                tempMultiplier *= 1.3;
+                updateAnimStats();
+            }
+        }
+
+        function resetCanvasAnim() {
+            initCanvas();
+        }
+
+        function updateAnimStats() {
+            var statsLabel = document.getElementById('collision-stats');
+            if(statsLabel) {
+                statsLabel.innerText = "Beobachtete Stöße: " + totalCollisions + " | Teilchen: " + animParticles.length + " | Geschwindigkeitsfaktor: " + tempMultiplier.toFixed(1) + "x";
+            }
+        }
+
+
+        // --- Navigation Logic ---
+        function switchTab(tabId) {
+            var contents = document.querySelectorAll('.tab-content');
+            for(var i=0; i<contents.length; i++) {
+                contents[i].classList.remove('active');
+            }
+            
+            var navs = document.querySelectorAll('header nav button');
+            for(var j=0; j<navs.length; j++) {
+                navs[j].classList.remove('bg-white', 'text-primary', 'shadow');
+                navs[j].classList.add('bg-secondary', 'bg-opacity-30', 'text-white');
+            }
+
+            document.getElementById('tab-' + tabId).classList.add('active');
+            
+            var activeNav = document.getElementById('nav-' + tabId);
+            if(activeNav) {
+                activeNav.classList.remove('bg-secondary', 'bg-opacity-30', 'text-white');
+                activeNav.classList.add('bg-white', 'text-primary', 'shadow');
+            }
+            
+            // Manage Canvas Rendering State
+            if(tabId === 'wr1') {
+                if (!isCanvasRunning) initCanvas();
+            } else {
+                isCanvasRunning = false;
+                cancelAnimationFrame(animId);
+            }
+        }
+
+        // --- Accordion Logic ---
+        function toggleAccordion(id) {
+            var content = document.getElementById(id + '-content');
+            var icon = document.getElementById(id + '-icon');
+            if(content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+                
+                // Initialize canvas explicitly if its accordion opens
+                if(id === 'acc-konz') {
+                    // Small delay to allow CSS reflow before fetching clientWidth
+                    setTimeout(initCanvas, 50);
+                }
+            } else {
+                content.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+                if(id === 'acc-konz') {
+                    isCanvasRunning = false;
+                    cancelAnimationFrame(animId);
+                }
+            }
+        }
+
+        // --- Aktivität 1: Wahr/Falsch Logic ---
+        function checkWF(qNum, isTrueBtn) {
+            var feedbackBox = document.getElementById('wf' + qNum + '-feedback');
+            var container = document.getElementById('wf' + qNum + '-container');
+            feedbackBox.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            
+            if(qNum === 1) {
+                if(isTrueBtn === false) {
+                    container.classList.add('border-green-400');
+                    feedbackBox.classList.add('bg-green-100', 'text-green-700');
+                    feedbackBox.innerHTML = "<strong>Völlig richtig!</strong> Die Aussage ist falsch. Mehr Teilchen bedeuten mehr 'Gedränge' im gleichen Volumen und damit eine <em>höhere</em> Wahrscheinlichkeit für Kollisionen.";
+                } else {
+                    container.classList.add('border-red-400');
+                    feedbackBox.classList.add('bg-red-100', 'text-red-700');
+                    feedbackBox.innerHTML = "<strong>Das stimmt leider nicht.</strong> Genau das Gegenteil ist der Fall: Je mehr Teilchen im Gefäß sind, desto häufiger stoßen sie zusammen.";
+                }
+            } else if(qNum === 2) {
+                if(isTrueBtn === true) {
+                    container.classList.add('border-green-400');
+                    feedbackBox.classList.add('bg-green-100', 'text-green-700');
+                    feedbackBox.innerHTML = "<strong>Korrekt!</strong> Das ist die Kernaussage der RGT-Regel (Reaktionsgeschwindigkeits-Temperatur-Regel).";
+                } else {
+                    container.classList.add('border-red-400');
+                    feedbackBox.classList.add('bg-red-100', 'text-red-700');
+                    feedbackBox.innerHTML = "<strong>Das ist falsch.</strong> Die Aussage ist korrekt! Wärme bedeutet, dass sich Teilchen schneller bewegen und heftiger stoßen.";
+                }
+            } else if(qNum === 3) {
+                if(isTrueBtn === false) {
+                    container.classList.add('border-green-400');
+                    feedbackBox.classList.add('bg-green-100', 'text-green-700');
+                    feedbackBox.innerHTML = "<strong>Richtig erkannt!</strong> Holzspäne brennen viel schneller, da ihr Zerteilungsgrad und somit die angreifbare Reaktionsoberfläche viel größer ist.";
+                } else {
+                    container.classList.add('border-red-400');
+                    feedbackBox.classList.add('bg-red-100', 'text-red-700');
+                    feedbackBox.innerHTML = "<strong>Das stimmt nicht.</strong> Feststoffe reagieren nur an der Oberfläche. Feine Holzspäne haben eine viel größere Gesamtoberfläche als ein kompakter Klotz.";
+                }
+            }
+            
+            setTimeout(function() {
+                container.classList.remove('border-green-400', 'border-red-400');
+            }, 1000);
+        }
+
+        // --- Aktivität 2: Lückentext ---
+        function checkLueckentext() {
+            var val1 = document.getElementById('lt-1').value;
+            var val2 = document.getElementById('lt-2').value;
+            var val3 = document.getElementById('lt-3').value;
+            var val4 = document.getElementById('lt-4').value;
+            var feedback = document.getElementById('lt-feedback');
+            
+            feedback.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            
+            if(val1 === 'konzentration' && val2 === 'effektiven' && val3 === 'schneller' && val4 === 'aktivierungsenergie') {
+                feedback.classList.add('bg-green-100', 'text-green-700');
+                feedback.innerHTML = "<strong>Exzellent!</strong> Du hast alle Lücken fachsprachlich korrekt gefüllt.";
+            } else {
+                feedback.classList.add('bg-red-100', 'text-red-700');
+                feedback.innerHTML = "<strong>Noch nicht ganz richtig.</strong> Überprüfe deine Antworten. Denk daran: Die RGT-Regel bezieht sich auf die Bewegung und die Energie der Teilchen.";
+            }
+        }
+
+        // --- Aktivität 3: Miniquiz (30 Fragen Pool) ---
+        var quizPool = [
+            { q: "Was gibt die Reaktionsgeschwindigkeit an?", options: ["Die Konzentrationsänderung pro Zeit", "Die Menge der Katalysatoren", "Die Temperaturänderung", "Das Volumen der Produkte"], correct: 0 },
+            { q: "Welche Einheit ist typisch für die Reaktionsgeschwindigkeit?", options: ["mol / (l * s)", "Gramm pro Liter", "Joule pro Sekunde", "Kelvin pro Mol"], correct: 0 },
+            { q: "Was besagt die RGT-Regel?", options: ["Bei 10K Erhöhung verdoppelt sich die Geschwindigkeit", "Temperatur hat keinen Einfluss", "Druck verzehnfacht die Geschwindigkeit", "Konzentration und Temperatur sind proportional"], correct: 0 },
+            { q: "Welches Modell erklärt Reaktionen auf Teilchenebene?", options: ["Kollisionsmodell", "Bohrsches Atommodell", "Schalenmodell", "Rutherford-Modell"], correct: 0 },
+            { q: "Was ist ein 'effektiver Stoß'?", options: ["Ein Stoß mit genug Energie und passender Orientierung", "Ein Stoß, der Licht erzeugt", "Ein Stoß zwischen identischen Teilchen", "Ein Stoß bei über 100 Grad Celsius"], correct: 0 },
+            { q: "Warum brennen Holzspäne schneller als ein Holzklotz?", options: ["Größerer Zerteilungsgrad", "Höhere Temperatur", "Geringere Dichte", "Weniger Aktivierungsenergie"], correct: 0 },
+            { q: "Was ist die Aktivierungsenergie?", options: ["Die Mindestenergie für einen effektiven Stoß", "Die Energie, die frei wird", "Die Temperatur des Raumes", "Die kinetische Energie bei 0 Kelvin"], correct: 0 },
+            { q: "Was passiert, wenn die Konzentration der Edukte steigt?", options: ["Die Reaktionsgeschwindigkeit steigt", "Die Reaktion stoppt", "Die Temperatur sinkt", "Die Aktivierungsenergie steigt"], correct: 0 },
+            { q: "Warum erhöht eine höhere Konzentration die Reaktionsgeschwindigkeit?", options: ["Mehr Teilchen führen zu mehr Stößen", "Die Teilchen werden schneller", "Die Teilchen werden größer", "Die Aktivierungsenergie sinkt"], correct: 0 },
+            { q: "Wie wirkt sich eine Temperaturerhöhung auf die Teilchen aus?", options: ["Sie bewegen sich schneller", "Sie werden schwerer", "Sie schrumpfen", "Sie zerfallen sofort"], correct: 0 },
+            { q: "Welcher Faktor beeinflusst Reaktionen von Feststoffen besonders?", options: ["Der Zerteilungsgrad (Oberfläche)", "Der Luftdruck", "Die Farbe", "Die elektrische Leitfähigkeit"], correct: 0 },
+            { q: "Was erhöht den Anteil der Teilchen mit ausreichender Aktivierungsenergie drastisch?", options: ["Temperaturerhöhung", "Drucksenkung", "Verringerung der Konzentration", "Verwendung größerer Feststoffbrocken"], correct: 0 },
+            { q: "Eine Verdopplung der Konzentration von A bei A+B->C führt meist zu...", options: ["Einer höheren Reaktionsgeschwindigkeit", "Keiner Änderung", "Einer Explosion", "Einer Temperaturabnahme"], correct: 0 },
+            { q: "RGT steht für...", options: ["Reaktionsgeschwindigkeits-Temperatur", "Relative Gas-Temperatur", "Reaktions-Gleichgewichts-Teilchen", "Rotierende-Gitter-Theorie"], correct: 0 },
+            { q: "Ein Stoß führt nicht zur Reaktion, wenn...", options: ["Die Energie zu gering ist", "Die Konzentration hoch ist", "Ein Katalysator fehlt", "Die Teilchen Gase sind"], correct: 0 },
+            { q: "Was vergrößert sich beim Zermahlen eines Kristalls zu Pulver?", options: ["Die Gesamtoberfläche", "Die Masse", "Das Volumen", "Die Dichte"], correct: 0 },
+            { q: "Welche Reaktion verläuft am langsamsten?", options: ["Das Rosten von Eisen", "Die Verbrennung von Benzin", "Das Abbrennen eines Streichholzes", "Das Schmelzen von Eis"], correct: 0 },
+            { q: "Wie kann man eine gefährlich schnelle Reaktion bremsen?", options: ["Durch Kühlen (Temperatursenkung)", "Durch Rühren", "Durch Zermahlen der Stoffe", "Durch Erhöhen der Konzentration"], correct: 0 },
+            { q: "Je kleiner die Partikel eines Feststoffs...", options: ["Desto größer die Reaktionsoberfläche", "Desto schwerer sind sie", "Desto geringer die Reaktionsgeschwindigkeit", "Desto höher die Aktivierungsenergie"], correct: 0 },
+            { q: "In der Formel v = Δc / Δt steht Δc für...", options: ["Die Konzentrationsänderung", "Die Temperaturänderung", "Die Zeitspanne", "Die Konstante"], correct: 0 },
+            { q: "Eine Reaktion verbraucht Wärme. Wie nennt man das?", options: ["Endotherm", "Exotherm", "Katalytisch", "Kinetisch"], correct: 0 },
+            { q: "Warum verlangsamt sich eine Reaktion meist mit der Zeit?", options: ["Die Konzentration der Edukte nimmt ab", "Die Teilchen werden müde", "Der Zerteilungsgrad sinkt automatisch", "Die Aktivierungsenergie steigt mit der Zeit"], correct: 0 },
+            { q: "Welcher Zustand der Edukte verspricht die schnellste Reaktion?", options: ["Feines Pulver gelöst in Flüssigkeit", "Ein großer solider Block", "Gefrorener Zustand", "Vakuum"], correct: 0 },
+            { q: "Kollisionsmodell: Was entscheidet neben der Energie noch über den Erfolg?", options: ["Die räumliche Orientierung beim Stoß", "Die Farbe der Teilchen", "Die Helligkeit im Raum", "Das Alter der Lösung"], correct: 0 },
+            { q: "Bei einer Temperaturerhöhung um 20K steigt die Geschwindigkeit etwa um das...", options: ["Vier- bis Sechzehnfache", "Zweifache", "Hundertfache", "Sie sinkt"], correct: 0 },
+            { q: "Was ist ein Maß für die ungeordnete Bewegung der Teilchen?", options: ["Die Temperatur", "Der Zerteilungsgrad", "Die Konzentration", "Das Volumen"], correct: 0 },
+            { q: "Welches Alltagsproblem wird durch das Kühlen von Lebensmitteln im Kühlschrank genutzt?", options: ["Senkung der Reaktionsgeschwindigkeit der Zersetzung", "Erhöhung der Konzentration", "Verringerung der Oberfläche", "Senkung des Drucks"], correct: 0 },
+            { q: "Staubexplosionen sind gefährlich wegen...", options: ["Dem extrem großen Zerteilungsgrad", "Dem hohen Druck", "Der geringen Temperatur", "Der hohen Dichte"], correct: 0 },
+            { q: "Wenn A und B reagieren, sinkt die Konzentration von A. Was passiert mit B?", options: ["Die Konzentration von B sinkt ebenfalls", "B bleibt konstant", "B verdampft", "B wird zum Katalysator"], correct: 0 },
+            { q: "Welche Aussage zur Reaktionskinetik ist richtig?", options: ["Nicht jeder Zusammenstoß führt zu einer Reaktion", "Alle Zusammenstöße sind effektiv", "Stöße finden nur bei Gasen statt", "Konzentration beeinflusst nur die Farbe"], correct: 0 }
+        ];
+
+        var currentQuizQuestions = [];
+        var currentQuestionIndex = 0;
+        var quizScore = 0;
+
+        function shuffleArray(array) {
+            var newArr = array.slice();
+            for (var i = newArr.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = newArr[i];
+                newArr[i] = newArr[j];
+                newArr[j] = temp;
+            }
+            return newArr;
+        }
+
+        function startQuiz() {
+            var shuffledPool = shuffleArray(quizPool);
+            currentQuizQuestions = shuffledPool.slice(0, 5);
+            currentQuestionIndex = 0;
+            quizScore = 0;
+            
+            document.getElementById('quiz-start-screen').classList.add('hidden');
+            document.getElementById('quiz-end-screen').classList.add('hidden');
+            document.getElementById('quiz-game-screen').classList.remove('hidden');
+            
+            updateQuizProgress();
+            renderQuizQuestion();
+        }
+
+        function updateQuizProgress() {
+            var displayNum = currentQuestionIndex + 1;
+            if (displayNum > 5) displayNum = 5;
+            document.getElementById('quiz-progress').innerText = displayNum + ' / 5';
+        }
+
+        function renderQuizQuestion() {
+            var qData = currentQuizQuestions[currentQuestionIndex];
+            document.getElementById('quiz-question').innerText = qData.q;
+            
+            var optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = ''; 
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('quiz-next-btn').classList.add('hidden');
+            
+            var optionsWithIndex = [];
+            for (var i = 0; i < qData.options.length; i++) {
+                optionsWithIndex.push({ text: qData.options[i], originalIdx: i });
+            }
+            optionsWithIndex = shuffleArray(optionsWithIndex);
+            
+            for (var j = 0; j < optionsWithIndex.length; j++) {
+                var opt = optionsWithIndex[j];
+                var btn = document.createElement('button');
+                btn.className = "quiz-option btn-tap btn-hover w-full shadow-sm hover:border-primary focus:outline-none";
+                btn.innerText = opt.text;
+                
+                (function(btnElement, originalIndex, correctIndex) {
+                    btnElement.onclick = function() {
+                        handleQuizAnswer(btnElement, originalIndex === correctIndex, correctIndex, optionsWithIndex);
+                    };
+                })(btn, opt.originalIdx, qData.correct);
+                
+                optionsContainer.appendChild(btn);
+            }
+        }
+
+        function handleQuizAnswer(selectedBtn, isCorrect, correctIndex, shuffledOptions) {
+            var buttons = document.getElementById('quiz-options').children;
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = true;
+                buttons[i].classList.remove('btn-tap', 'btn-hover', 'hover:border-primary');
+                if (shuffledOptions[i].originalIdx === correctIndex) {
+                    buttons[i].classList.add('correct');
+                    buttons[i].innerHTML = "<i data-lucide='check-circle' class='w-5 h-5 mr-2'></i> " + buttons[i].innerText;
+                }
+            }
+            
+            var feedback = document.getElementById('quiz-feedback');
+            feedback.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            
+            if (isCorrect) {
+                quizScore++;
+                feedback.classList.add('bg-green-100', 'text-green-700');
+                feedback.innerHTML = "<strong>Klasse!</strong> Das ist die richtige Antwort.";
+            } else {
+                selectedBtn.classList.add('wrong');
+                selectedBtn.innerHTML = "<i data-lucide='x-circle' class='w-5 h-5 mr-2'></i> " + selectedBtn.innerText;
+                feedback.classList.add('bg-red-100', 'text-red-700');
+                feedback.innerHTML = "<strong>Leider falsch.</strong> Die korrekte Antwort ist grün markiert.";
+            }
+            
+            lucide.createIcons();
+            document.getElementById('quiz-next-btn').classList.remove('hidden');
+        }
+
+        function nextQuizQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < 5) {
+                updateQuizProgress();
+                renderQuizQuestion();
+            } else {
+                document.getElementById('quiz-game-screen').classList.add('hidden');
+                document.getElementById('quiz-end-screen').classList.remove('hidden');
+                document.getElementById('quiz-score').innerText = quizScore;
+            }
+        }
+
+    </script>
+</body>
+</html>

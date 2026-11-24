@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chemie Oberstufe – Lern-Apps</title>
+<style>
+  :root {
+    --gruen: #3d7c47;
+    --gruen-dunkel: #2b5a33;
+    --hell: #dfeae3;
+    --grund: #f4f8f6;
+    --akzent: #b6964a;
+    --text: #1f2a22;
+    --grau: #5b6b60;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--grund);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  header {
+    background: var(--gruen);
+    color: #fff;
+    padding: 2.5rem 0 2rem;
+  }
+  header .inner, main, footer { max-width: 860px; margin: 0 auto; }
+  header .inner { padding: 0 1.5rem; }
+  header p { margin: .4rem 0 0; opacity: .9; }
+  h1 { margin: 0; font-size: 1.9rem; }
+  main { padding: 1.5rem; }
+  section { margin-bottom: 1.75rem; }
+  h2 {
+    font-size: 1.15rem;
+    margin: 0 0 .6rem;
+    display: flex;
+    align-items: baseline;
+    gap: .6rem;
+  }
+  h2 .nr {
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--gruen);
+    background: var(--hell);
+    border-radius: 6px;
+    padding: .1rem .5rem;
+  }
+  .karten { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  a.karte {
+    display: block;
+    background: #fff;
+    border: 1px solid #d5e2da;
+    border-left: 5px solid var(--gruen);
+    border-radius: 10px;
+    padding: .9rem 1rem;
+    color: inherit;
+    text-decoration: none;
+    transition: transform .12s, box-shadow .12s;
+  }
+  a.karte:hover, a.karte:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(43, 90, 51, .15);
+    outline: none;
+  }
+  a.karte.sim { border-left-color: var(--akzent); }
+  .titel { font-weight: 650; display: block; }
+  .info { color: var(--grau); font-size: .9rem; }
+  .tag {
+    display: inline-block;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--grau);
+    margin-bottom: .2rem;
+  }
+  footer {
+    padding: 1rem 1.5rem 2.5rem;
+    color: var(--grau);
+    font-size: .85rem;
+    border-top: 1px solid #d5e2da;
+  }
+  footer a { color: var(--gruen-dunkel); }
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>Chemie Oberstufe</h1>
+    <p>Interaktive Lern-Apps zum Üben und Wiederholen</p>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2><span class="nr">01</span> Kinetik und chemisches Gleichgewicht</h2>
+    <div class="karten">
+      <a class="karte" href="01-kinetik-ggw/">
+        <span class="tag">Lern-App</span>
+        <span class="titel">Reaktionskinetik</span>
+        <span class="info">Reaktionsgleichungen, Stoffmenge, Einflussfaktoren</span>
+      </a>
+      <a class="karte sim" href="01-kinetik-ggw/lechatelier-konzentration.html">
+        <span class="tag">Simulation</span>
+        <span class="titel">Estersynthese: Einfluss der Konzentration</span>
+        <span class="info">Kollisionsmodell</span>
+      </a>
+      <a class="karte sim" href="01-kinetik-ggw/lechatelier-druck.html">
+        <span class="tag">Simulation</span>
+        <span class="titel">Druckabhängigkeit</span>
+        <span class="info">NO₂ / N₂O₄-Gleichgewicht</span>
+      </a>
+      <a class="karte sim" href="01-kinetik-ggw/lechatelier-temperatur.html">
+        <span class="tag">Simulation</span>
+        <span class="titel">Temperaturabhängigkeit</span>
+        <span class="info">NO₂ / N₂O₄-Gleichgewicht</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="nr">02</span> Protonenübergänge</h2>
+    <div class="karten">
+      <a class="karte" href="02-protonenuebergaenge/">
+        <span class="tag">Lern-App</span>
+        <span class="titel">Säure-Base-Reaktionen</span>
+        <span class="info">Brønsted, Protolyse, Ionenprodukt, K<sub>S</sub>/K<sub>B</sub></span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="nr">03</span> Redoxreaktionen</h2>
+    <div class="karten">
+      <a class="karte" href="03-redoxreaktionen/">
+        <span class="tag">Lern-App</span>
+        <span class="titel">Redoxreaktionen</span>
+        <span class="info">Oxidationszahlen, Redoxgleichungen aufstellen</span>
+      </a>
+      <a class="karte" href="03-redoxreaktionen/elektrochemie/">
+        <span class="tag">Lern-App</span>
+        <span class="titel">Elektrochemie</span>
+        <span class="info">Galvanische Zellen, Spannungsreihe, Akkus</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="nr">04</span> Elektrolyse</h2>
+    <div class="karten">
+      <a class="karte" href="04-elektrolyse/">
+        <span class="tag">Lern-App</span>
+        <span class="titel">Elektrolyse</span>
+        <span class="info">Hofmann-Apparat, Faraday-Gesetze, Technik</span>
+      </a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Jan Summe · Lizenz: <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.de">CC BY-SA 4.0</a>
+  (Fremdmaterial ist in den Apps einzeln ausgewiesen)
+</footer>
+</body>
+</html>

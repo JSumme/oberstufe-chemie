@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Druckabhängigkeit: NO2 / N2O4 Gleichgewicht</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            display: block;
+        }
+        /* Übergang für den makroskopischen Farbeffekt im Hintergrund */
+        #gasVolume {
+            transition: background-color 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header (Angepasst an Screenshot-Stil) -->
+        <details class="group bg-white rounded-xl shadow-sm border border-slate-200" open>
+            <summary class="cursor-pointer list-none flex justify-between items-center p-6 border-b border-slate-100">
+                <div class="flex items-center gap-4 w-full">
+                    <!-- Druck/Stempel Icon -->
+                    <svg class="w-8 h-8 text-[#7ca58e] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <h1 class="text-xl md:text-2xl font-bold text-[#7ca58e] text-center flex-grow pr-8">Simulation: Druckabhängigkeit des Chemischen Gleichgewichts</h1>
+                </div>
+                <!-- Chevron Icon -->
+                <svg class="w-6 h-6 text-[#7ca58e] transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+            </summary>
+            
+            <div class="p-6 text-slate-700 leading-relaxed">
+                <p class="mb-2">
+                    Simulation der druckabhängigen Gleichgewichtsreaktion auf Teilchenebene:
+                </p>
+                <p class="mb-2 text-lg font-bold">
+                    <span class="text-amber-800">2 NO<sub>2</sub> (braun)</span> 
+                    <span class="mx-2 text-xl font-bold text-slate-800">⇌</span> 
+                    <span class="text-slate-400">N<sub>2</sub>O<sub>4</sub> (farblos)</span>
+                </p>
+                <p class="mb-6">
+                    Beobachte, wie sich das Gleichgewicht bei einer Volumenänderung (Druckänderung) verschiebt. Vergleiche den makroskopischen Farbeffekt im Gefäß mit der mikroskopischen Teilchenebene.
+                </p>
+                
+                <!-- Legende -->
+                <div class="flex flex-wrap gap-6 pt-5 border-t border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full inline-block shadow-sm" style="background-color: #92400E;"></span> 
+                        <span class="text-sm font-bold text-slate-800">NO<sub>2</sub></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full inline-block bg-slate-300"></span> 
+                        <span class="text-sm font-bold text-slate-800">N<sub>2</sub>O<sub>4</sub></span>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Steuerung (Links) -->
+            <div class="col-span-1 lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-6">
+                <!-- Buttons Moved to Top -->
+                <div class="flex flex-col gap-2 mb-2">
+                    <button id="btnPlay" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded transition shadow">
+                        ▶ Simulation starten
+                    </button>
+                    <button id="btnReset" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-2 px-4 rounded transition">
+                        Neu starten
+                    </button>
+                </div>
+
+                <h2 class="text-xl font-bold border-b pb-2">Parameter</h2>
+                
+                <!-- Startwerte -->
+                <div class="space-y-3">
+                    <h3 class="font-semibold text-slate-700">Startanzahl der Teilchen</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">NO<sub>2</sub></label>
+                            <input type="number" id="startNO2" value="100" min="0" max="200" class="w-full border rounded p-2 focus:ring focus:ring-amber-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">N<sub>2</sub>O<sub>4</sub></label>
+                            <input type="number" id="startN2O4" value="0" min="0" max="100" class="w-full border rounded p-2 focus:ring focus:ring-slate-200">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Volumen / Druck Slider -->
+                <div class="space-y-4 pt-4 border-t">
+                    <h3 class="font-semibold text-slate-700">Zylindervolumen (Druck)</h3>
+                    <p class="text-[11px] text-slate-500 mb-2 leading-tight">Ein kleineres Volumen erhöht den Druck und die Stoßwahrscheinlichkeit der Teilchen drastisch.</p>
+                    
+                    <div class="bg-slate-50 p-3 rounded border border-slate-200 shadow-inner">
+                        <label class="flex justify-between text-sm font-bold text-slate-700 mb-2">
+                            <span>Volumen</span>
+                            <span id="volVal" class="text-indigo-600">100 %</span>
+                        </label>
+                        <!-- Invertierte Logik im Kopf: Kleines Volumen = Hoher Druck -->
+                        <input type="range" id="volSlider" min="25" max="100" step="1" value="100" class="w-full accent-indigo-500">
+                        <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-bold">
+                            <span>Hoher Druck</span>
+                            <span>Normaldruck</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hauptbereich: Gefäß & Graph (Rechts) -->
+            <div class="col-span-1 lg:col-span-9 flex flex-col gap-6">
+                
+                <!-- Visualisierung (Oben) -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                    <h3 class="font-bold text-slate-700 mb-2 w-full text-center">Gaszylinder mit Stempel</h3>
+                    
+                    <!-- Container für das Gefäß -->
+                    <div class="relative w-full h-[350px] lg:h-[450px] bg-slate-50 rounded-lg border-2 border-slate-300 overflow-hidden shadow-inner flex justify-center">
+                        <canvas id="particleCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <!-- Graph (Unten) -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col flex-grow">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700 w-full text-center">Teilchenanzahl-Zeit-Diagramm</h3>
+                    </div>
+                    
+                    <!-- Live Counter -->
+                    <div class="grid grid-cols-2 gap-4 mb-4 text-center text-sm font-bold uppercase tracking-wider">
+                        <div class="bg-amber-50 p-3 rounded border-b-4 border-amber-700 text-amber-900">
+                            NO<sub>2</sub> Anzahl<br><span id="countNO2" class="text-2xl">0</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded border-b-4 border-slate-400 text-slate-700">
+                            N<sub>2</sub>O<sub>4</sub> Anzahl<br><span id="countN2O4" class="text-2xl">0</span>
+                        </div>
+                    </div>
+
+                    <div class="w-full flex-grow relative" style="min-height: 250px;">
+                        <canvas id="chartCanvas" class="w-full h-full absolute inset-0"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Definitionen ---
+        const TYPES = {
+            NO2: 0,
+            N2O4: 1
+        };
+
+        const PROPS = {
+            [TYPES.NO2]: { color: '#92400E', radius: 6, mass: 1 },
+            [TYPES.N2O4]: { color: '#F8FAFC', outline: '#CBD5E1', radius: 9, mass: 2 }
+        };
+
+        // --- State Management ---
+        let state = {
+            particles: [],
+            rawHistory: { [TYPES.NO2]: [], [TYPES.N2O4]: [] },
+            history: { [TYPES.NO2]: [], [TYPES.N2O4]: [] },
+            time: 0,
+            isPlaying: false,
+            animFrameId: null,
+            chartUpdateTimer: 0,
+            totalNO2Equivalents: 0
+        };
+
+        let params = {
+            volumePercent: 100, // 25 - 100
+            baseSpeed: 2.0,
+            dimerizeProb: 0.15, // Konstante Wahrscheinlichkeit bei Kollision
+            decompRate: 0.005   // Konstante Zerfallsrate (unimolekular)
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            startNO2: document.getElementById('startNO2'),
+            startN2O4: document.getElementById('startN2O4'),
+            volSlider: document.getElementById('volSlider'),
+            volVal: document.getElementById('volVal'),
+            btnPlay: document.getElementById('btnPlay'),
+            btnReset: document.getElementById('btnReset'),
+            particleCanvas: document.getElementById('particleCanvas'),
+            chartCanvas: document.getElementById('chartCanvas'),
+            counts: {
+                [TYPES.NO2]: document.getElementById('countNO2'),
+                [TYPES.N2O4]: document.getElementById('countN2O4')
+            }
+        };
+
+        const pCtx = els.particleCanvas.getContext('2d');
+        const cCtx = els.chartCanvas.getContext('2d');
+
+        // --- Initialization ---
+        function init() {
+            resizeCanvases();
+            window.addEventListener('resize', resizeCanvases);
+            bindEvents();
+            resetSimulation();
+        }
+
+        function resizeCanvases() {
+            const dpr = window.devicePixelRatio || 1;
+            
+            const pRect = els.particleCanvas.parentElement.getBoundingClientRect();
+            els.particleCanvas.width = pRect.width * dpr;
+            els.particleCanvas.height = pRect.height * dpr;
+            pCtx.scale(dpr, dpr);
+
+            const cRect = els.chartCanvas.parentElement.getBoundingClientRect();
+            els.chartCanvas.width = cRect.width * dpr;
+            els.chartCanvas.height = cRect.height * dpr;
+            cCtx.scale(dpr, dpr);
+            
+            if(!state.isPlaying) {
+                drawParticles();
+                drawChart();
+            }
+        }
+
+        function bindEvents() {
+            els.volSlider.addEventListener('input', () => {
+                els.volVal.innerText = els.volSlider.value + ' %';
+                readParams();
+                if(!state.isPlaying) drawParticles(); // Stempelbewegung live anzeigen, auch bei Pause
+            });
+
+            els.btnPlay.addEventListener('click', togglePlay);
+            els.btnReset.addEventListener('click', resetSimulation);
+        }
+
+        // --- Particle Engine ---
+        class Particle {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.radius = PROPS[type].radius;
+                this.mass = PROPS[type].mass;
+                
+                // Geschwindigkeit bleibt bei reiner Druckänderung (idealisiert isotherme Kompression) konstant
+                let targetSpeed = params.baseSpeed / Math.sqrt(this.mass);
+                
+                let angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * targetSpeed;
+                this.vy = Math.sin(angle) * targetSpeed;
+            }
+        }
+
+        function readParams() {
+            params.volumePercent = parseInt(els.volSlider.value);
+            
+            // Wenn der Stempel nach unten drückt, müssen Teilchen, die zu weit oben sind, nach unten geschoben werden
+            const pHeight = els.particleCanvas.height / (window.devicePixelRatio || 1);
+            let pistonBottomY = 40 + (pHeight - 40) * (1 - params.volumePercent / 100);
+            
+            for(let p of state.particles) {
+                if (p.y - p.radius < pistonBottomY) {
+                    p.y = pistonBottomY + p.radius + Math.random() * 2; // Leichtes Rauschen
+                    p.vy = Math.abs(p.vy); // Nach unten reflektieren
+                }
+            }
+        }
+
+        function resetSimulation() {
+            if(state.isPlaying) togglePlay();
+            
+            state.particles = [];
+            state.time = 0;
+            state.chartUpdateTimer = 0;
+            
+            readParams(); // Holt das aktuelle Volumen
+            
+            const pWidth = els.particleCanvas.width / (window.devicePixelRatio || 1);
+            const pHeight = els.particleCanvas.height / (window.devicePixelRatio || 1);
+            let pistonBottomY = 40 + (pHeight - 40) * (1 - params.volumePercent / 100);
+            let activeHeight = pHeight - pistonBottomY;
+            
+            let no2Count = parseInt(els.startNO2.value) || 0;
+            let n2o4Count = parseInt(els.startN2O4.value) || 0;
+            
+            state.totalNO2Equivalents = no2Count + (n2o4Count * 2);
+
+            for(let i=0; i<no2Count; i++) {
+                let r = PROPS[TYPES.NO2].radius;
+                // Teilchen spawnen nur im aktiven Volumen unter dem Stempel
+                state.particles.push(new Particle(r + Math.random() * (pWidth - 2*r), pistonBottomY + r + Math.random() * (activeHeight - 2*r), TYPES.NO2));
+            }
+            for(let i=0; i<n2o4Count; i++) {
+                let r = PROPS[TYPES.N2O4].radius;
+                state.particles.push(new Particle(r + Math.random() * (pWidth - 2*r), pistonBottomY + r + Math.random() * (activeHeight - 2*r), TYPES.N2O4));
+            }
+
+            // Reset History
+            let counts = countParticles();
+            state.rawHistory[TYPES.NO2] = [counts[TYPES.NO2]];
+            state.rawHistory[TYPES.N2O4] = [counts[TYPES.N2O4]];
+            state.history[TYPES.NO2] = [counts[TYPES.NO2]];
+            state.history[TYPES.N2O4] = [counts[TYPES.N2O4]];
+
+            updateUI();
+            drawParticles();
+            drawChart();
+        }
+
+        function togglePlay() {
+            state.isPlaying = !state.isPlaying;
+            if (state.isPlaying) {
+                els.btnPlay.innerText = "⏸ Pausieren";
+                els.btnPlay.classList.replace('bg-emerald-600', 'bg-amber-600');
+                els.btnPlay.classList.replace('hover:bg-emerald-700', 'hover:bg-amber-700');
+                gameLoop();
+            } else {
+                els.btnPlay.innerText = "▶ Simulation fortsetzen";
+                els.btnPlay.classList.replace('bg-amber-600', 'bg-emerald-600');
+                els.btnPlay.classList.replace('hover:bg-amber-700', 'hover:bg-emerald-700');
+                cancelAnimationFrame(state.animFrameId);
+            }
+        }
+
+        // --- Physics & Reaction Logic ---
+        function updatePhysics() {
+            const pWidth = els.particleCanvas.width / (window.devicePixelRatio || 1);
+            const pHeight = els.particleCanvas.height / (window.devicePixelRatio || 1);
+            
+            // Berechnung der Kolben-Position
+            let pistonBottomY = 40 + (pHeight - 40) * (1 - params.volumePercent / 100);
+
+            let nextParticles = [];
+            let toRemove = new Set();
+
+            // 1. Unimolekularer Zerfall (N2O4 -> 2 NO2)
+            // Die Wahrscheinlichkeit ist konstant, da die Temperatur (hypothetisch) konstant bleibt
+            let decompRate = params.decompRate;
+
+            for (let p of state.particles) {
+                if (p.type === TYPES.N2O4) {
+                    if (Math.random() < decompRate) {
+                        toRemove.add(p);
+                        
+                        let p1 = new Particle(p.x, p.y, TYPES.NO2);
+                        let p2 = new Particle(p.x, p.y, TYPES.NO2);
+                        
+                        let angle = Math.random() * Math.PI * 2;
+                        let separationSpeed = 1.0;
+                        p1.vx = p.vx + Math.cos(angle) * separationSpeed;
+                        p1.vy = p.vy + Math.sin(angle) * separationSpeed;
+                        p2.vx = p.vx - Math.cos(angle) * separationSpeed;
+                        p2.vy = p.vy - Math.sin(angle) * separationSpeed;
+                        
+                        // Safety Bounds
+                        p1.x = Math.max(p1.radius, Math.min(pWidth - p1.radius, p1.x + p1.vx));
+                        p1.y = Math.max(pistonBottomY + p1.radius, Math.min(pHeight - p1.radius, p1.y + p1.vy));
+                        p2.x = Math.max(p2.radius, Math.min(pWidth - p2.radius, p2.x + p2.vx));
+                        p2.y = Math.max(pistonBottomY + p2.radius, Math.min(pHeight - p2.radius, p2.y + p2.vy));
+
+                        nextParticles.push(p1, p2);
+                    }
+                }
+            }
+
+            // 2. Bewegung & Wandkollision
+            for (let p of state.particles) {
+                if(toRemove.has(p)) continue;
+                
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // X-Wände
+                if (p.x - p.radius < 0) { p.x = p.radius; p.vx *= -1; }
+                if (p.x + p.radius > pWidth) { p.x = pWidth - p.radius; p.vx *= -1; }
+                
+                // Y-Wände (Boden und Stempel)
+                if (p.y + p.radius > pHeight) { p.y = pHeight - p.radius; p.vy *= -1; }
+                if (p.y - p.radius < pistonBottomY) { p.y = pistonBottomY + p.radius; p.vy = Math.abs(p.vy); } // Abprallen am Stempel
+            }
+
+            // 3. Teilchen-Kollisionen & Bimolekulare Dimerisierung
+            for (let i = 0; i < state.particles.length; i++) {
+                let p1 = state.particles[i];
+                if (toRemove.has(p1)) continue;
+
+                for (let j = i + 1; j < state.particles.length; j++) {
+                    let p2 = state.particles[j];
+                    if (toRemove.has(p2)) continue;
+
+                    let dx = p2.x - p1.x;
+                    let dy = p2.y - p1.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    let minDist = p1.radius + p2.radius;
+
+                    if (distance < minDist) {
+                        // Reaktion Check (nur 2x NO2 können reagieren)
+                        if (p1.type === TYPES.NO2 && p2.type === TYPES.NO2) {
+                            if (Math.random() < params.dimerizeProb) {
+                                toRemove.add(p1);
+                                toRemove.add(p2);
+                                
+                                let pNew = new Particle((p1.x + p2.x)/2, (p1.y + p2.y)/2, TYPES.N2O4);
+                                pNew.vx = (p1.mass * p1.vx + p2.mass * p2.vx) / pNew.mass;
+                                pNew.vy = (p1.mass * p1.vy + p2.mass * p2.vy) / pNew.mass;
+                                
+                                nextParticles.push(pNew);
+                                break; 
+                            }
+                        }
+
+                        // Elastischer Stoß
+                        let overlap = minDist - distance;
+                        let nx = dx / distance;
+                        let ny = dy / distance;
+                        
+                        let totalMass = p1.mass + p2.mass;
+                        let p1MoveRatio = p2.mass / totalMass;
+                        let p2MoveRatio = p1.mass / totalMass;
+                        
+                        p1.x -= nx * (overlap * p1MoveRatio);
+                        p1.y -= ny * (overlap * p1MoveRatio);
+                        p2.x += nx * (overlap * p2MoveRatio);
+                        p2.y += ny * (overlap * p2MoveRatio);
+
+                        let kx = (p1.vx - p2.vx);
+                        let ky = (p1.vy - p2.vy);
+                        let p_coll = 2.0 * (nx * kx + ny * ky) / totalMass;
+                        
+                        p1.vx = p1.vx - p_coll * p2.mass * nx;
+                        p1.vy = p1.vy - p_coll * p2.mass * ny;
+                        p2.vx = p2.vx + p_coll * p1.mass * nx;
+                        p2.vy = p2.vy + p_coll * p1.mass * ny;
+                    }
+                }
+            }
+
+            for (let p of state.particles) {
+                if (!toRemove.has(p)) nextParticles.push(p);
+            }
+            state.particles = nextParticles;
+        }
+
+        function countParticles() {
+            let counts = { [TYPES.NO2]:0, [TYPES.N2O4]:0 };
+            for(let p of state.particles) counts[p.type]++;
+            return counts;
+        }
+
+        function updateHistoryData() {
+            state.time++;
+            let counts = countParticles();
+            
+            state.rawHistory[TYPES.NO2].push(counts[TYPES.NO2]);
+            state.rawHistory[TYPES.N2O4].push(counts[TYPES.N2O4]);
+            
+            // Starke Glättung für optimalen GGW-Verlauf
+            let sliceNO2 = state.rawHistory[TYPES.NO2].slice(-40);
+            let avgNO2 = sliceNO2.reduce((s, v) => s + v, 0) / sliceNO2.length;
+            state.history[TYPES.NO2].push(avgNO2);
+
+            let sliceN2O4 = state.rawHistory[TYPES.N2O4].slice(-40);
+            let avgN2O4 = sliceN2O4.reduce((s, v) => s + v, 0) / sliceN2O4.length;
+            state.history[TYPES.N2O4].push(avgN2O4);
+        }
+
+        // --- Rendering ---
+        function drawParticles() {
+            const width = els.particleCanvas.width / window.devicePixelRatio;
+            const height = els.particleCanvas.height / window.devicePixelRatio;
+            let pistonBottomY = 40 + (height - 40) * (1 - params.volumePercent / 100);
+            
+            pCtx.clearRect(0, 0, width, height);
+
+            // 1. Hintergrund für das Gasvolumen (Farbe abhängig von Dichte)
+            let counts = countParticles();
+            let density = 0;
+            if (state.totalNO2Equivalents > 0) {
+                // Dichte: Anzahl NO2 bezogen auf das aktuelle Volumen in % (verhindert div/0)
+                density = counts[TYPES.NO2] / (state.totalNO2Equivalents * (params.volumePercent / 100));
+            }
+            // Maximal sinnvolle Dichte abfangen für den Alpha-Wert
+            let alpha = Math.min(0.8, density * 0.4); 
+            pCtx.fillStyle = `rgba(146, 64, 14, ${alpha})`;
+            pCtx.fillRect(0, pistonBottomY, width, height - pistonBottomY);
+
+            // 2. Teilchen zeichnen
+            for (let p of state.particles) {
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                pCtx.fillStyle = PROPS[p.type].color;
+                pCtx.fill();
+                
+                pCtx.lineWidth = 2;
+                if(PROPS[p.type].outline) {
+                    pCtx.strokeStyle = PROPS[p.type].outline;
+                } else {
+                    pCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+                }
+                pCtx.stroke();
+            }
+
+            // 3. Stempel (Piston) zeichnen
+            // Stempel Griff (Schaft in der Mitte)
+            let handleWidth = 40;
+            pCtx.fillStyle = '#CBD5E1'; // slate-300
+            pCtx.fillRect(width/2 - handleWidth/2, 0, handleWidth, pistonBottomY);
+
+            // Stempel Platte (Gummidichtung)
+            pCtx.fillStyle = '#64748b'; // slate-500
+            pCtx.fillRect(0, pistonBottomY - 16, width, 16);
+        }
+
+        function drawChart() {
+            const width = els.chartCanvas.width / window.devicePixelRatio;
+            const height = els.chartCanvas.height / window.devicePixelRatio;
+            
+            cCtx.clearRect(0, 0, width, height);
+            
+            const padX = 40;
+            const padY = 20;
+            const chartW = width - padX - 10;
+            const chartH = height - padY * 2;
+            
+            cCtx.lineWidth = 1;
+            cCtx.strokeStyle = '#e2e8f0';
+            cCtx.fillStyle = '#64748b';
+            cCtx.font = '10px sans-serif';
+            cCtx.textAlign = 'right';
+            cCtx.textBaseline = 'middle';
+            
+            const maxVal = Math.max(state.totalNO2Equivalents, 20);
+            const steps = 4;
+            
+            for(let i=0; i<=steps; i++) {
+                let y = (height - padY) - (i/steps) * chartH;
+                
+                cCtx.beginPath();
+                cCtx.moveTo(padX, y);
+                cCtx.lineTo(width, y);
+                cCtx.stroke();
+                
+                cCtx.fillText(Math.round((i/steps) * maxVal), padX - 5, y);
+            }
+
+            const drawLine = (historyArray, color) => {
+                if (historyArray.length === 0) return;
+                
+                cCtx.beginPath();
+                let xMax = Math.max(state.time, 100); 
+                
+                for (let i = 0; i < historyArray.length; i++) {
+                    const x = padX + (i / xMax) * chartW;
+                    const y = (height - padY) - (historyArray[i] / maxVal) * chartH;
+                    if (i === 0) cCtx.moveTo(x, y);
+                    else cCtx.lineTo(x, y);
+                }
+                cCtx.strokeStyle = color;
+                cCtx.lineWidth = 3;
+                cCtx.lineJoin = 'round';
+                cCtx.stroke();
+            };
+            
+            drawLine(state.history[TYPES.NO2], PROPS[TYPES.NO2].color);
+            drawLine(state.history[TYPES.N2O4], '#64748b'); 
+            
+            cCtx.fillStyle = '#64748b';
+            cCtx.textAlign = 'center';
+            cCtx.fillText("Zeit", padX + chartW/2, height - 5);
+        }
+
+        function updateUI() {
+            let lastIdx = state.history[TYPES.NO2].length - 1;
+            if(lastIdx >= 0) {
+                els.counts[TYPES.NO2].innerText = Math.round(state.history[TYPES.NO2][lastIdx]);
+                els.counts[TYPES.N2O4].innerText = Math.round(state.history[TYPES.N2O4][lastIdx]);
+            }
+        }
+
+        // --- Main Loop ---
+        function gameLoop() {
+            if (!state.isPlaying) return;
+
+            updatePhysics();
+            drawParticles();
+
+            state.chartUpdateTimer++;
+            if (state.chartUpdateTimer >= 8) { 
+                updateHistoryData();
+                updateUI();
+                drawChart();
+                state.chartUpdateTimer = 0;
+            }
+
+            state.animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Boot
+        window.onload = init;
+    </script>
+</body>
+</html>

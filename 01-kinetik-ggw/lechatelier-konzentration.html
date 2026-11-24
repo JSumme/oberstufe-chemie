@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estersynthese: Kollisionsmodell und Einfluss der Konzentration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">Estersynthese: Kollisionsmodell und Einfluss der Konzentration</h1>
+            <p class="text-slate-600">
+                Simulation der Gleichgewichtsreaktion auf Teilchenebene (festes K = 4) der Veresterung und Esterhydrolyse:<br>
+                <strong>Ethanol + Ethansäure ⇌ Wasser + Essigsäureethylester</strong><br>
+                Füge während der Reaktion Stoffe hinzu, um das <strong>Prinzip von Le Chatelier</strong> (Flucht vor dem Zwang) zu beobachten.
+            </p>
+            
+            <!-- Legende -->
+            <div class="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100">
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full inline-block" style="background-color: #90C020;"></span> <span class="text-sm font-medium">Ethanol</span></div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full inline-block" style="background-color: #EA5A2A;"></span> <span class="text-sm font-medium">Ethansäure</span></div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full inline-block" style="background-color: #0071B9;"></span> <span class="text-sm font-medium">Wasser</span></div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full inline-block" style="background-color: #FDB913;"></span> <span class="text-sm font-medium">Ester</span></div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Steuerung (Links) -->
+            <div class="col-span-1 lg:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-6">
+                <!-- Buttons Moved to Top -->
+                <div class="flex flex-col gap-2 mb-2">
+                    <button id="btnPlay" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded transition shadow">
+                        ▶ Simulation starten
+                    </button>
+                    <button id="btnReset" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-2 px-4 rounded transition">
+                        Neu starten
+                    </button>
+                </div>
+
+                <h2 class="text-xl font-bold border-b pb-2">Parameter</h2>
+                
+                <!-- Startwerte -->
+                <div class="space-y-3">
+                    <h3 class="font-semibold text-slate-700">Startanzahl der Teilchen</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Ethanol</label>
+                            <input type="number" id="startEthanol" value="40" min="0" max="200" class="w-full border rounded p-2 focus:ring focus:ring-lime-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Ethansäure</label>
+                            <input type="number" id="startEssigsaure" value="40" min="0" max="200" class="w-full border rounded p-2 focus:ring focus:ring-orange-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Wasser</label>
+                            <input type="number" id="startWasser" value="0" min="0" max="200" class="w-full border rounded p-2 focus:ring focus:ring-blue-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-600 mb-1">Ester</label>
+                            <input type="number" id="startEster" value="0" min="0" max="200" class="w-full border rounded p-2 focus:ring focus:ring-yellow-200">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hauptbereich: Gefäß & Graph (Rechts) -->
+            <div class="col-span-1 lg:col-span-9 flex flex-col gap-6">
+                
+                <!-- Visualisierung (Oben) -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                    <h3 class="font-bold text-slate-700 mb-2 w-full text-center">Reaktionsgefäß</h3>
+                    <!-- Höhe flexibel eingestellt für Desktop und Mobile -->
+                    <div class="relative w-full h-[350px] lg:h-[450px] bg-blue-50/30 rounded-lg border-2 border-slate-300 overflow-hidden shadow-inner">
+                        <canvas id="particleCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+
+                    <!-- LE CHATELIER BUTTONS -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                        <button id="btnAddEthanol" class="bg-[#90C020] hover:bg-[#7a9e1e] text-white text-sm py-2 px-2 rounded font-bold shadow transition flex justify-center items-center">
+                            + 20 Ethanol
+                        </button>
+                        <button id="btnAddEssigsaure" class="bg-[#EA5A2A] hover:bg-[#c24b23] text-white text-sm py-2 px-2 rounded font-bold shadow transition flex justify-center items-center">
+                            + 20 Ethansäure
+                        </button>
+                        <button id="btnAddWasser" class="bg-[#0071B9] hover:bg-[#005a91] text-white text-sm py-2 px-2 rounded font-bold shadow transition flex justify-center items-center">
+                            + 20 Wasser
+                        </button>
+                        <button id="btnAddEster" class="bg-[#FDB913] hover:bg-[#db9d0d] text-white text-sm py-2 px-2 rounded font-bold shadow transition flex justify-center items-center">
+                            + 20 Ester
+                        </button>
+                        
+                        <button id="btnSubEthanol" class="border-2 border-[#90C020] text-[#7a9e1e] hover:bg-[#90C020] hover:text-white text-sm py-2 px-2 rounded font-bold transition flex justify-center items-center">
+                            - 20 Ethanol
+                        </button>
+                        <button id="btnSubEssigsaure" class="border-2 border-[#EA5A2A] text-[#c24b23] hover:bg-[#EA5A2A] hover:text-white text-sm py-2 px-2 rounded font-bold transition flex justify-center items-center">
+                            - 20 Ethansäure
+                        </button>
+                        <button id="btnSubWasser" class="border-2 border-[#0071B9] text-[#005a91] hover:bg-[#0071B9] hover:text-white text-sm py-2 px-2 rounded font-bold transition flex justify-center items-center">
+                            - 20 Wasser
+                        </button>
+                        <button id="btnSubEster" class="border-2 border-[#FDB913] text-[#db9d0d] hover:bg-[#FDB913] hover:text-white text-sm py-2 px-2 rounded font-bold transition flex justify-center items-center">
+                            - 20 Ester
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Graph (Unten) -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col flex-grow">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-slate-700 w-full text-center">Konzentrations-Zeit-Diagramm</h3>
+                    </div>
+                    
+                    <!-- Live Counter -->
+                    <div class="grid grid-cols-4 gap-2 mb-4 text-center text-xs font-bold uppercase tracking-wider">
+                        <div class="bg-slate-50 p-2 rounded border-b-2" style="border-color: #90C020; color: #729a17;">
+                            Ethanol<br><span id="countEthanol" class="text-lg">0</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border-b-2" style="border-color: #EA5A2A; color: #c0451b;">
+                            Ethansäure<br><span id="countEssigsaure" class="text-lg">0</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border-b-2" style="border-color: #0071B9; color: #00568f;">
+                            Wasser<br><span id="countWasser" class="text-lg">0</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border-b-2" style="border-color: #FDB913; color: #c48f0a;">
+                            Ester<br><span id="countEster" class="text-lg">0</span>
+                        </div>
+                    </div>
+
+                    <div class="w-full flex-grow relative" style="min-height: 250px;">
+                        <canvas id="chartCanvas" class="w-full h-full absolute inset-0"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Definitionen & Farben aus dem Screenshot ---
+        const TYPES = {
+            ETHANOL: 0,
+            ESSIGSAURE: 1,
+            WASSER: 2,
+            ESTER: 3
+        };
+
+        const COLORS = {
+            [TYPES.ETHANOL]: '#90C020',    // Grün
+            [TYPES.ESSIGSAURE]: '#EA5A2A', // Orange
+            [TYPES.WASSER]: '#0071B9',     // Blau
+            [TYPES.ESTER]: '#FDB913'       // Gelb
+        };
+
+        // --- State Management ---
+        let state = {
+            particles: [],
+            rawHistory: { // Für die rohen, zitternden Werte
+                [TYPES.ETHANOL]: [], [TYPES.ESSIGSAURE]: [], [TYPES.WASSER]: [], [TYPES.ESTER]: []
+            },
+            history: {    // Für die geglätteten Werte (Optimalfall)
+                [TYPES.ETHANOL]: [], [TYPES.ESSIGSAURE]: [], [TYPES.WASSER]: [], [TYPES.ESTER]: []
+            },
+            time: 0,
+            isPlaying: false,
+            animFrameId: null,
+            chartUpdateTimer: 0
+        };
+
+        // Temperatur fest auf 50 °C arretiert
+        let params = {
+            temperature: 50,
+            radius: 8,
+            baseSpeed: 2.0
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            startEthanol: document.getElementById('startEthanol'),
+            startEssigsaure: document.getElementById('startEssigsaure'),
+            startWasser: document.getElementById('startWasser'),
+            startEster: document.getElementById('startEster'),
+            btnPlay: document.getElementById('btnPlay'),
+            btnReset: document.getElementById('btnReset'),
+            btnAddEthanol: document.getElementById('btnAddEthanol'),
+            btnAddEssigsaure: document.getElementById('btnAddEssigsaure'),
+            btnAddWasser: document.getElementById('btnAddWasser'),
+            btnAddEster: document.getElementById('btnAddEster'),
+            btnSubEthanol: document.getElementById('btnSubEthanol'),
+            btnSubEssigsaure: document.getElementById('btnSubEssigsaure'),
+            btnSubWasser: document.getElementById('btnSubWasser'),
+            btnSubEster: document.getElementById('btnSubEster'),
+            particleCanvas: document.getElementById('particleCanvas'),
+            chartCanvas: document.getElementById('chartCanvas'),
+            counts: {
+                [TYPES.ETHANOL]: document.getElementById('countEthanol'),
+                [TYPES.ESSIGSAURE]: document.getElementById('countEssigsaure'),
+                [TYPES.WASSER]: document.getElementById('countWasser'),
+                [TYPES.ESTER]: document.getElementById('countEster')
+            }
+        };
+
+        const pCtx = els.particleCanvas.getContext('2d');
+        const cCtx = els.chartCanvas.getContext('2d');
+
+        // --- Initialization ---
+        function init() {
+            resizeCanvases();
+            window.addEventListener('resize', resizeCanvases);
+            bindEvents();
+            resetSimulation();
+        }
+
+        function resizeCanvases() {
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Particle Canvas
+            const pRect = els.particleCanvas.parentElement.getBoundingClientRect();
+            els.particleCanvas.width = pRect.width * dpr;
+            els.particleCanvas.height = pRect.height * dpr;
+            pCtx.scale(dpr, dpr);
+
+            // Chart Canvas
+            const cRect = els.chartCanvas.parentElement.getBoundingClientRect();
+            els.chartCanvas.width = cRect.width * dpr;
+            els.chartCanvas.height = cRect.height * dpr;
+            cCtx.scale(dpr, dpr);
+            
+            if(!state.isPlaying) {
+                drawParticles();
+                drawChart();
+            }
+        }
+
+        function bindEvents() {
+            els.btnPlay.addEventListener('click', togglePlay);
+            els.btnReset.addEventListener('click', resetSimulation);
+
+            // Le Chatelier Buttons
+            els.btnAddEthanol.addEventListener('click', () => { addParticles(20, TYPES.ETHANOL); forceChartUpdate(); });
+            els.btnAddEssigsaure.addEventListener('click', () => { addParticles(20, TYPES.ESSIGSAURE); forceChartUpdate(); });
+            els.btnAddWasser.addEventListener('click', () => { addParticles(20, TYPES.WASSER); forceChartUpdate(); });
+            els.btnAddEster.addEventListener('click', () => { addParticles(20, TYPES.ESTER); forceChartUpdate(); });
+
+            els.btnSubEthanol.addEventListener('click', () => { removeParticles(20, TYPES.ETHANOL); forceChartUpdate(); });
+            els.btnSubEssigsaure.addEventListener('click', () => { removeParticles(20, TYPES.ESSIGSAURE); forceChartUpdate(); });
+            els.btnSubWasser.addEventListener('click', () => { removeParticles(20, TYPES.WASSER); forceChartUpdate(); });
+            els.btnSubEster.addEventListener('click', () => { removeParticles(20, TYPES.ESTER); forceChartUpdate(); });
+        }
+
+        // --- Particle Engine ---
+        class Particle {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                
+                let speedMult = 0.5 + (params.temperature / 90) * 2.0;
+                let targetSpeed = params.baseSpeed * speedMult;
+                
+                let angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(angle) * targetSpeed;
+                this.vy = Math.sin(angle) * targetSpeed;
+                this.radius = params.radius;
+                this.mass = 1; 
+            }
+        }
+
+        function addParticles(count, type) {
+            const pWidth = els.particleCanvas.width / (window.devicePixelRatio || 1);
+            const pHeight = els.particleCanvas.height / (window.devicePixelRatio || 1);
+            
+            for(let i=0; i<count; i++) {
+                let r = params.radius;
+                let x = r + Math.random() * (pWidth - 2*r);
+                let y = r + Math.random() * (pHeight - 2*r);
+                state.particles.push(new Particle(x, y, type));
+            }
+        }
+
+        function removeParticles(count, type) {
+            let removed = 0;
+            // Wir iterieren rückwärts, um Teilchen sicher aus dem Array zu löschen
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                if (state.particles[i].type === type) {
+                    state.particles.splice(i, 1);
+                    removed++;
+                    if (removed >= count) break;
+                }
+            }
+        }
+
+        function forceChartUpdate() {
+            // Sorgt dafür, dass nach dem Klick auf einen Button der Graph sofort den Sprung zeichnet
+            if(!state.isPlaying) {
+                updateHistoryData();
+                updateUI();
+                drawParticles();
+                drawChart();
+            }
+        }
+
+        function resetSimulation() {
+            if(state.isPlaying) togglePlay();
+            
+            state.particles = [];
+            state.time = 0;
+            state.chartUpdateTimer = 0;
+            
+            addParticles(parseInt(els.startEthanol.value) || 0, TYPES.ETHANOL);
+            addParticles(parseInt(els.startEssigsaure.value) || 0, TYPES.ESSIGSAURE);
+            addParticles(parseInt(els.startWasser.value) || 0, TYPES.WASSER);
+            addParticles(parseInt(els.startEster.value) || 0, TYPES.ESTER);
+
+            // Reset History
+            let counts = countParticles();
+            for(let type in TYPES) {
+                let t = TYPES[type];
+                state.rawHistory[t] = [counts[t]];
+                state.history[t] = [counts[t]];
+            }
+
+            updateUI();
+            drawParticles();
+            drawChart();
+        }
+
+        function togglePlay() {
+            state.isPlaying = !state.isPlaying;
+            if (state.isPlaying) {
+                els.btnPlay.innerText = "⏸ Pausieren";
+                els.btnPlay.classList.replace('bg-emerald-600', 'bg-amber-600');
+                els.btnPlay.classList.replace('hover:bg-emerald-700', 'hover:bg-amber-700');
+                gameLoop();
+            } else {
+                els.btnPlay.innerText = "▶ Simulation fortsetzen";
+                els.btnPlay.classList.replace('bg-amber-600', 'bg-emerald-600');
+                els.btnPlay.classList.replace('hover:bg-amber-700', 'hover:bg-emerald-700');
+                cancelAnimationFrame(state.animFrameId);
+            }
+        }
+
+        // --- Physics & Reaction Logic ---
+        function updatePhysics() {
+            const pWidth = els.particleCanvas.width / (window.devicePixelRatio || 1);
+            const pHeight = els.particleCanvas.height / (window.devicePixelRatio || 1);
+
+            // 1. Move particles
+            for (let p of state.particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x - p.radius < 0) { p.x = p.radius; p.vx *= -1; }
+                if (p.x + p.radius > pWidth) { p.x = pWidth - p.radius; p.vx *= -1; }
+                if (p.y - p.radius < 0) { p.y = p.radius; p.vy *= -1; }
+                if (p.y + p.radius > pHeight) { p.y = pHeight - p.radius; p.vy *= -1; }
+            }
+
+            // 2. Check Collisions
+            for (let i = 0; i < state.particles.length; i++) {
+                for (let j = i + 1; j < state.particles.length; j++) {
+                    let p1 = state.particles[i];
+                    let p2 = state.particles[j];
+
+                    let dx = p2.x - p1.x;
+                    let dy = p2.y - p1.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    let minDist = p1.radius + p2.radius;
+
+                    if (distance < minDist) {
+                        let overlap = minDist - distance;
+                        let nx = dx / distance;
+                        let ny = dy / distance;
+                        p1.x -= nx * (overlap / 2);
+                        p1.y -= ny * (overlap / 2);
+                        p2.x += nx * (overlap / 2);
+                        p2.y += ny * (overlap / 2);
+
+                        let kx = (p1.vx - p2.vx);
+                        let ky = (p1.vy - p2.vy);
+                        let p_coll = 2.0 * (nx * kx + ny * ky) / (p1.mass + p2.mass);
+                        
+                        p1.vx = p1.vx - p_coll * p2.mass * nx;
+                        p1.vy = p1.vy - p_coll * p2.mass * ny;
+                        p2.vx = p2.vx + p_coll * p1.mass * nx;
+                        p2.vy = p2.vy + p_coll * p1.mass * ny;
+
+                        // --- REACTION LOGIC (K = 4) ---
+                        handleReaction(p1, p2);
+                    }
+                }
+            }
+        }
+
+        function handleReaction(p1, p2) {
+            // Temperatur beeinflusst die Gesamtwahrscheinlichkeit einer Reaktion bei einem Stoß
+            let baseRate = 0.005 + (params.temperature / 90) * 0.025; 
+            
+            // Um K=4 zu erhalten, muss die Hinreaktion 4x so wahrscheinlich sein wie die Rückreaktion!
+            let probRueck = baseRate;
+            let probHin = baseRate * 4.0;
+
+            let isHinreaktion = 
+                (p1.type === TYPES.ETHANOL && p2.type === TYPES.ESSIGSAURE) ||
+                (p1.type === TYPES.ESSIGSAURE && p2.type === TYPES.ETHANOL);
+                
+            if (isHinreaktion) {
+                if (Math.random() < probHin) {
+                    p1.type = TYPES.WASSER;
+                    p2.type = TYPES.ESTER;
+                    return; 
+                }
+            }
+
+            let isRueckreaktion = 
+                (p1.type === TYPES.WASSER && p2.type === TYPES.ESTER) ||
+                (p1.type === TYPES.ESTER && p2.type === TYPES.WASSER);
+
+            if (isRueckreaktion) {
+                if (Math.random() < probRueck) {
+                    p1.type = TYPES.ETHANOL;
+                    p2.type = TYPES.ESSIGSAURE;
+                }
+            }
+        }
+
+        function countParticles() {
+            let counts = { [TYPES.ETHANOL]:0, [TYPES.ESSIGSAURE]:0, [TYPES.WASSER]:0, [TYPES.ESTER]:0 };
+            for(let p of state.particles) counts[p.type]++;
+            return counts;
+        }
+
+        function updateHistoryData() {
+            state.time++;
+            let counts = countParticles();
+            
+            for(let type in TYPES) {
+                let t = TYPES[type];
+                state.rawHistory[t].push(counts[t]);
+                
+                // GLÄTTUNG (Moving Average über die letzten 12 Frames)
+                // Dadurch wird extremes Zittern reduziert, aber das dynamische Gleichgewicht bleibt sichtbar
+                let slice = state.rawHistory[t].slice(-12);
+                let avg = slice.reduce((sum, val) => sum + val, 0) / slice.length;
+                state.history[t].push(avg);
+            }
+        }
+
+        // --- Rendering ---
+        function drawParticles() {
+            const width = els.particleCanvas.width / window.devicePixelRatio;
+            const height = els.particleCanvas.height / window.devicePixelRatio;
+            
+            pCtx.clearRect(0, 0, width, height);
+            
+            for (let p of state.particles) {
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                pCtx.fillStyle = COLORS[p.type];
+                pCtx.fill();
+                
+                pCtx.lineWidth = 1.5;
+                pCtx.strokeStyle = 'rgba(0,0,0,0.1)';
+                pCtx.stroke();
+            }
+        }
+
+        function drawChart() {
+            const width = els.chartCanvas.width / window.devicePixelRatio;
+            const height = els.chartCanvas.height / window.devicePixelRatio;
+            
+            cCtx.clearRect(0, 0, width, height);
+            
+            const padX = 40;
+            const padY = 20;
+            const chartW = width - padX - 10;
+            const chartH = height - padY * 2;
+            
+            cCtx.lineWidth = 1;
+            cCtx.strokeStyle = '#e2e8f0';
+            cCtx.fillStyle = '#64748b';
+            cCtx.font = '10px sans-serif';
+            cCtx.textAlign = 'right';
+            cCtx.textBaseline = 'middle';
+            
+            const maxVal = Math.max(state.particles.length, 100);
+            const steps = 4;
+            
+            for(let i=0; i<=steps; i++) {
+                let y = (height - padY) - (i/steps) * chartH;
+                
+                cCtx.beginPath();
+                cCtx.moveTo(padX, y);
+                cCtx.lineTo(width, y);
+                cCtx.stroke();
+                
+                cCtx.fillText(Math.round((i/steps) * maxVal), padX - 5, y);
+            }
+
+            const drawLine = (historyArray, color) => {
+                if (historyArray.length === 0) return;
+                
+                cCtx.beginPath();
+                let xMax = Math.max(state.time, 100); 
+                
+                for (let i = 0; i < historyArray.length; i++) {
+                    const x = padX + (i / xMax) * chartW;
+                    const y = (height - padY) - (historyArray[i] / maxVal) * chartH;
+                    if (i === 0) cCtx.moveTo(x, y);
+                    else cCtx.lineTo(x, y);
+                }
+                cCtx.strokeStyle = color;
+                cCtx.lineWidth = 3;
+                cCtx.lineJoin = 'round';
+                cCtx.stroke();
+            };
+            
+            // Wir zeichnen die geglätteten Werte für ein perfektes GGW-Bild
+            drawLine(state.history[TYPES.ETHANOL], COLORS[TYPES.ETHANOL]);
+            drawLine(state.history[TYPES.ESSIGSAURE], COLORS[TYPES.ESSIGSAURE]);
+            drawLine(state.history[TYPES.WASSER], COLORS[TYPES.WASSER]);
+            drawLine(state.history[TYPES.ESTER], COLORS[TYPES.ESTER]);
+            
+            cCtx.fillStyle = '#64748b';
+            cCtx.textAlign = 'center';
+            cCtx.fillText("Zeit", padX + chartW/2, height - 5);
+        }
+
+        function updateUI() {
+            // Nutze die geglätteten Werte für die Anzeige, gerundet auf ganze Zahlen
+            // Dadurch springen die Zahlen nicht wild hin und her, wenn das GGW erreicht ist
+            let lastIdx = state.history[TYPES.ETHANOL].length - 1;
+            if(lastIdx >= 0) {
+                els.counts[TYPES.ETHANOL].innerText = Math.round(state.history[TYPES.ETHANOL][lastIdx]);
+                els.counts[TYPES.ESSIGSAURE].innerText = Math.round(state.history[TYPES.ESSIGSAURE][lastIdx]);
+                els.counts[TYPES.WASSER].innerText = Math.round(state.history[TYPES.WASSER][lastIdx]);
+                els.counts[TYPES.ESTER].innerText = Math.round(state.history[TYPES.ESTER][lastIdx]);
+            }
+        }
+
+        // --- Main Loop ---
+        function gameLoop() {
+            if (!state.isPlaying) return;
+
+            updatePhysics();
+            drawParticles();
+
+            state.chartUpdateTimer++;
+            if (state.chartUpdateTimer >= 10) { 
+                updateHistoryData();
+                updateUI();
+                drawChart();
+                state.chartUpdateTimer = 0;
+            }
+
+            state.animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Boot
+        window.onload = init;
+    </script>
+</body>
+</html>
